@@ -46,6 +46,9 @@ impl Store {
             Some(id) => Some(lock_conversation(&mut tx, id, channel).await?),
             None => None,
         };
+        if head.as_ref().is_some_and(|head| head.managed) {
+            return Err(INVALID);
+        }
         let original = locked(&mut tx, channel).await?;
         if original.conversation_id != conversation_id || original.delivery_only {
             return Err(INVALID);
@@ -142,7 +145,7 @@ impl Store {
                 .bind(owner.run_id).bind(run_id).bind(owner.epoch.checked_add(1).ok_or(LOST)?).bind(at).execute(&mut *tx).await.map_err(|_|FAILED)?;
         }
         let conversation = if let (Some(id), Some(head)) = (conversation_id, &head) {
-            sqlx::query("UPDATE forge_runtime.conversations SET execution_run_id=$2,generation=$3,updated_at=$4 WHERE id=$1")
+            sqlx::query("UPDATE forge_runtime.conversations SET execution_run_id=$2,current_delivery_run_id=$2,generation=$3,updated_at=$4 WHERE id=$1")
                 .bind(id).bind(run_id).bind(generation).bind(at).execute(&mut *tx).await.map_err(|_|FAILED)?;
             Some(ConversationProof {
                 id,

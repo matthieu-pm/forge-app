@@ -1,0 +1,4264 @@
+{
+  "cases": [
+    {
+      "kind": "deliveries",
+      "name": "empty",
+      "deliveries": [],
+      "valid": false
+    },
+    {
+      "kind": "prefix",
+      "name": "empty",
+      "deliveries": [],
+      "valid": true,
+      "output": {
+        "result": {
+          "kind": "closed"
+        },
+        "remaining": []
+      }
+    },
+    {
+      "kind": "deliveries",
+      "name": "singleton",
+      "deliveries": [
+        {
+          "kind": "deliver",
+          "requestId": "first",
+          "payloads": [
+            {
+              "message": "first"
+            }
+          ],
+          "firstMetadata": "retained"
+        }
+      ],
+      "valid": true,
+      "output": {
+        "kind": "deliver",
+        "requestId": "first",
+        "payloads": [
+          {
+            "message": "first"
+          }
+        ],
+        "firstMetadata": "retained"
+      }
+    },
+    {
+      "kind": "prefix",
+      "name": "singleton",
+      "deliveries": [
+        {
+          "kind": "deliver",
+          "requestId": "first",
+          "payloads": [
+            {
+              "message": "first"
+            }
+          ],
+          "firstMetadata": "retained"
+        }
+      ],
+      "valid": true,
+      "output": {
+        "result": {
+          "deliver": {
+            "kind": "deliver",
+            "requestId": "first",
+            "payloads": [
+              {
+                "message": "first"
+              }
+            ],
+            "firstMetadata": "retained"
+          },
+          "kind": "turn",
+          "remainder": {
+            "message": "first"
+          }
+        },
+        "remaining": []
+      }
+    },
+    {
+      "kind": "deliveries",
+      "name": "same-run",
+      "deliveries": [
+        {
+          "kind": "deliver",
+          "requestId": "first",
+          "payloads": [
+            {
+              "message": "first"
+            }
+          ],
+          "auth": {
+            "fixtureAuthority": "A"
+          }
+        },
+        {
+          "kind": "deliver",
+          "requestId": "second",
+          "payloads": [
+            {
+              "message": "second"
+            }
+          ],
+          "auth": {
+            "fixtureAuthority": "A"
+          }
+        }
+      ],
+      "valid": true,
+      "output": {
+        "kind": "deliver",
+        "requestId": "first",
+        "payloads": [
+          {
+            "message": "first"
+          },
+          {
+            "message": "second"
+          }
+        ],
+        "auth": {
+          "fixtureAuthority": "A"
+        }
+      }
+    },
+    {
+      "kind": "prefix",
+      "name": "same-run",
+      "deliveries": [
+        {
+          "kind": "deliver",
+          "requestId": "first",
+          "payloads": [
+            {
+              "message": "first"
+            }
+          ],
+          "auth": {
+            "fixtureAuthority": "A"
+          }
+        },
+        {
+          "kind": "deliver",
+          "requestId": "second",
+          "payloads": [
+            {
+              "message": "second"
+            }
+          ],
+          "auth": {
+            "fixtureAuthority": "A"
+          }
+        }
+      ],
+      "valid": true,
+      "output": {
+        "result": {
+          "deliver": {
+            "kind": "deliver",
+            "requestId": "first",
+            "payloads": [
+              {
+                "message": "first"
+              },
+              {
+                "message": "second"
+              }
+            ],
+            "auth": {
+              "fixtureAuthority": "A"
+            }
+          },
+          "kind": "turn",
+          "remainder": {
+            "message": "first\n\nsecond"
+          }
+        },
+        "remaining": []
+      }
+    },
+    {
+      "kind": "deliveries",
+      "name": "cross-run",
+      "deliveries": [
+        {
+          "kind": "deliver",
+          "requestId": "first",
+          "payloads": [
+            {
+              "message": "first"
+            }
+          ],
+          "auth": {
+            "fixtureAuthority": "A"
+          },
+          "firstMetadata": "retained"
+        },
+        {
+          "kind": "deliver",
+          "requestId": "second",
+          "payloads": [
+            {
+              "message": "second"
+            }
+          ],
+          "auth": {
+            "fixtureAuthority": "C"
+          },
+          "firstMetadata": "discarded"
+        }
+      ],
+      "valid": true,
+      "output": {
+        "kind": "deliver",
+        "requestId": "first",
+        "payloads": [
+          {
+            "message": "first"
+          },
+          {
+            "message": "second"
+          }
+        ],
+        "auth": {
+          "fixtureAuthority": "C"
+        },
+        "firstMetadata": "retained"
+      }
+    },
+    {
+      "kind": "prefix",
+      "name": "cross-run",
+      "deliveries": [
+        {
+          "kind": "deliver",
+          "requestId": "first",
+          "payloads": [
+            {
+              "message": "first"
+            }
+          ],
+          "auth": {
+            "fixtureAuthority": "A"
+          },
+          "firstMetadata": "retained"
+        },
+        {
+          "kind": "deliver",
+          "requestId": "second",
+          "payloads": [
+            {
+              "message": "second"
+            }
+          ],
+          "auth": {
+            "fixtureAuthority": "C"
+          },
+          "firstMetadata": "discarded"
+        }
+      ],
+      "valid": true,
+      "output": {
+        "result": {
+          "deliver": {
+            "kind": "deliver",
+            "requestId": "first",
+            "payloads": [
+              {
+                "message": "first"
+              },
+              {
+                "message": "second"
+              }
+            ],
+            "auth": {
+              "fixtureAuthority": "C"
+            },
+            "firstMetadata": "retained"
+          },
+          "kind": "turn",
+          "remainder": {
+            "message": "first\n\nsecond"
+          }
+        },
+        "remaining": []
+      }
+    },
+    {
+      "kind": "deliveries",
+      "name": "last-absent-authority",
+      "deliveries": [
+        {
+          "kind": "deliver",
+          "requestId": "first",
+          "payloads": [
+            {
+              "message": "first"
+            }
+          ],
+          "auth": {
+            "fixtureAuthority": "A"
+          }
+        },
+        {
+          "kind": "deliver",
+          "requestId": "second",
+          "payloads": [
+            {
+              "message": "second"
+            }
+          ]
+        }
+      ],
+      "valid": true,
+      "output": {
+        "kind": "deliver",
+        "requestId": "first",
+        "payloads": [
+          {
+            "message": "first"
+          },
+          {
+            "message": "second"
+          }
+        ],
+        "auth": {
+          "fixtureAuthority": "A"
+        }
+      }
+    },
+    {
+      "kind": "prefix",
+      "name": "last-absent-authority",
+      "deliveries": [
+        {
+          "kind": "deliver",
+          "requestId": "first",
+          "payloads": [
+            {
+              "message": "first"
+            }
+          ],
+          "auth": {
+            "fixtureAuthority": "A"
+          }
+        },
+        {
+          "kind": "deliver",
+          "requestId": "second",
+          "payloads": [
+            {
+              "message": "second"
+            }
+          ]
+        }
+      ],
+      "valid": true,
+      "output": {
+        "result": {
+          "deliver": {
+            "kind": "deliver",
+            "requestId": "first",
+            "payloads": [
+              {
+                "message": "first"
+              },
+              {
+                "message": "second"
+              }
+            ],
+            "auth": {
+              "fixtureAuthority": "A"
+            }
+          },
+          "kind": "turn",
+          "remainder": {
+            "message": "first\n\nsecond"
+          }
+        },
+        "remaining": []
+      }
+    },
+    {
+      "kind": "deliveries",
+      "name": "last-null-authority",
+      "deliveries": [
+        {
+          "kind": "deliver",
+          "requestId": "first",
+          "payloads": [
+            {
+              "message": "first"
+            }
+          ],
+          "auth": {
+            "fixtureAuthority": "A"
+          }
+        },
+        {
+          "kind": "deliver",
+          "requestId": "second",
+          "payloads": [
+            {
+              "message": "second"
+            }
+          ],
+          "auth": null
+        }
+      ],
+      "valid": true,
+      "output": {
+        "kind": "deliver",
+        "requestId": "first",
+        "payloads": [
+          {
+            "message": "first"
+          },
+          {
+            "message": "second"
+          }
+        ],
+        "auth": null
+      }
+    },
+    {
+      "kind": "prefix",
+      "name": "last-null-authority",
+      "deliveries": [
+        {
+          "kind": "deliver",
+          "requestId": "first",
+          "payloads": [
+            {
+              "message": "first"
+            }
+          ],
+          "auth": {
+            "fixtureAuthority": "A"
+          }
+        },
+        {
+          "kind": "deliver",
+          "requestId": "second",
+          "payloads": [
+            {
+              "message": "second"
+            }
+          ],
+          "auth": null
+        }
+      ],
+      "valid": true,
+      "output": {
+        "result": {
+          "deliver": {
+            "kind": "deliver",
+            "requestId": "first",
+            "payloads": [
+              {
+                "message": "first"
+              },
+              {
+                "message": "second"
+              }
+            ],
+            "auth": null
+          },
+          "kind": "turn",
+          "remainder": {
+            "message": "first\n\nsecond"
+          }
+        },
+        "remaining": []
+      }
+    },
+    {
+      "kind": "deliveries",
+      "name": "null-then-authority",
+      "deliveries": [
+        {
+          "kind": "deliver",
+          "requestId": "first",
+          "payloads": [
+            {
+              "message": "first"
+            }
+          ],
+          "auth": null
+        },
+        {
+          "kind": "deliver",
+          "requestId": "second",
+          "payloads": [
+            {
+              "message": "second"
+            }
+          ],
+          "auth": {
+            "fixtureAuthority": "C"
+          }
+        }
+      ],
+      "valid": true,
+      "output": {
+        "kind": "deliver",
+        "requestId": "first",
+        "payloads": [
+          {
+            "message": "first"
+          },
+          {
+            "message": "second"
+          }
+        ],
+        "auth": {
+          "fixtureAuthority": "C"
+        }
+      }
+    },
+    {
+      "kind": "prefix",
+      "name": "null-then-authority",
+      "deliveries": [
+        {
+          "kind": "deliver",
+          "requestId": "first",
+          "payloads": [
+            {
+              "message": "first"
+            }
+          ],
+          "auth": null
+        },
+        {
+          "kind": "deliver",
+          "requestId": "second",
+          "payloads": [
+            {
+              "message": "second"
+            }
+          ],
+          "auth": {
+            "fixtureAuthority": "C"
+          }
+        }
+      ],
+      "valid": true,
+      "output": {
+        "result": {
+          "deliver": {
+            "kind": "deliver",
+            "requestId": "first",
+            "payloads": [
+              {
+                "message": "first"
+              },
+              {
+                "message": "second"
+              }
+            ],
+            "auth": {
+              "fixtureAuthority": "C"
+            }
+          },
+          "kind": "turn",
+          "remainder": {
+            "message": "first\n\nsecond"
+          }
+        },
+        "remaining": []
+      }
+    },
+    {
+      "kind": "deliveries",
+      "name": "first-caller",
+      "deliveries": [
+        {
+          "kind": "deliver",
+          "requestId": "first",
+          "payloads": [
+            {
+              "message": "first"
+            }
+          ],
+          "caller": {
+            "fixtureCaller": "A"
+          }
+        },
+        {
+          "kind": "deliver",
+          "requestId": "second",
+          "payloads": [
+            {
+              "message": "second"
+            }
+          ]
+        }
+      ],
+      "valid": true,
+      "output": {
+        "kind": "deliver",
+        "requestId": "first",
+        "payloads": [
+          {
+            "message": "first"
+          },
+          {
+            "message": "second"
+          }
+        ],
+        "caller": {
+          "fixtureCaller": "A"
+        }
+      }
+    },
+    {
+      "kind": "prefix",
+      "name": "first-caller",
+      "deliveries": [
+        {
+          "kind": "deliver",
+          "requestId": "first",
+          "payloads": [
+            {
+              "message": "first"
+            }
+          ],
+          "caller": {
+            "fixtureCaller": "A"
+          }
+        },
+        {
+          "kind": "deliver",
+          "requestId": "second",
+          "payloads": [
+            {
+              "message": "second"
+            }
+          ]
+        }
+      ],
+      "valid": true,
+      "output": {
+        "result": {
+          "deliver": {
+            "kind": "deliver",
+            "requestId": "first",
+            "payloads": [
+              {
+                "message": "first"
+              },
+              {
+                "message": "second"
+              }
+            ],
+            "caller": {
+              "fixtureCaller": "A"
+            }
+          },
+          "kind": "turn",
+          "remainder": {
+            "message": "first\n\nsecond"
+          }
+        },
+        "remaining": []
+      }
+    },
+    {
+      "kind": "deliveries",
+      "name": "last-caller",
+      "deliveries": [
+        {
+          "kind": "deliver",
+          "requestId": "first",
+          "payloads": [
+            {
+              "message": "first"
+            }
+          ]
+        },
+        {
+          "kind": "deliver",
+          "requestId": "second",
+          "payloads": [
+            {
+              "message": "second"
+            }
+          ],
+          "caller": {
+            "fixtureCaller": "C"
+          }
+        }
+      ],
+      "valid": true,
+      "output": {
+        "kind": "deliver",
+        "requestId": "first",
+        "payloads": [
+          {
+            "message": "first"
+          },
+          {
+            "message": "second"
+          }
+        ],
+        "caller": {
+          "fixtureCaller": "C"
+        }
+      }
+    },
+    {
+      "kind": "prefix",
+      "name": "last-caller",
+      "deliveries": [
+        {
+          "kind": "deliver",
+          "requestId": "first",
+          "payloads": [
+            {
+              "message": "first"
+            }
+          ]
+        },
+        {
+          "kind": "deliver",
+          "requestId": "second",
+          "payloads": [
+            {
+              "message": "second"
+            }
+          ],
+          "caller": {
+            "fixtureCaller": "C"
+          }
+        }
+      ],
+      "valid": true,
+      "output": {
+        "result": {
+          "deliver": {
+            "kind": "deliver",
+            "requestId": "first",
+            "payloads": [
+              {
+                "message": "first"
+              },
+              {
+                "message": "second"
+              }
+            ],
+            "caller": {
+              "fixtureCaller": "C"
+            }
+          },
+          "kind": "turn",
+          "remainder": {
+            "message": "first\n\nsecond"
+          }
+        },
+        "remaining": []
+      }
+    },
+    {
+      "kind": "deliveries",
+      "name": "two-callers",
+      "deliveries": [
+        {
+          "kind": "deliver",
+          "requestId": "first",
+          "payloads": [
+            {
+              "message": "first"
+            }
+          ],
+          "caller": {
+            "fixtureCaller": "A"
+          }
+        },
+        {
+          "kind": "deliver",
+          "requestId": "second",
+          "payloads": [
+            {
+              "message": "second"
+            }
+          ],
+          "caller": {
+            "fixtureCaller": "C"
+          }
+        }
+      ],
+      "valid": false
+    },
+    {
+      "kind": "prefix",
+      "name": "two-callers",
+      "deliveries": [
+        {
+          "kind": "deliver",
+          "requestId": "first",
+          "payloads": [
+            {
+              "message": "first"
+            }
+          ],
+          "caller": {
+            "fixtureCaller": "A"
+          }
+        },
+        {
+          "kind": "deliver",
+          "requestId": "second",
+          "payloads": [
+            {
+              "message": "second"
+            }
+          ],
+          "caller": {
+            "fixtureCaller": "C"
+          }
+        }
+      ],
+      "valid": true,
+      "output": {
+        "result": {
+          "deliver": {
+            "kind": "deliver",
+            "requestId": "first",
+            "payloads": [
+              {
+                "message": "first"
+              }
+            ],
+            "caller": {
+              "fixtureCaller": "A"
+            }
+          },
+          "kind": "turn",
+          "remainder": {
+            "message": "first"
+          }
+        },
+        "remaining": [
+          {
+            "kind": "deliver",
+            "requestId": "second",
+            "payloads": [
+              {
+                "message": "second"
+              }
+            ],
+            "caller": {
+              "fixtureCaller": "C"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "kind": "deliveries",
+      "name": "same-caller-twice",
+      "deliveries": [
+        {
+          "kind": "deliver",
+          "requestId": "first",
+          "payloads": [
+            {
+              "message": "first"
+            }
+          ],
+          "caller": {
+            "fixtureCaller": "A"
+          }
+        },
+        {
+          "kind": "deliver",
+          "requestId": "second",
+          "payloads": [
+            {
+              "message": "second"
+            }
+          ],
+          "caller": {
+            "fixtureCaller": "A"
+          }
+        }
+      ],
+      "valid": false
+    },
+    {
+      "kind": "prefix",
+      "name": "same-caller-twice",
+      "deliveries": [
+        {
+          "kind": "deliver",
+          "requestId": "first",
+          "payloads": [
+            {
+              "message": "first"
+            }
+          ],
+          "caller": {
+            "fixtureCaller": "A"
+          }
+        },
+        {
+          "kind": "deliver",
+          "requestId": "second",
+          "payloads": [
+            {
+              "message": "second"
+            }
+          ],
+          "caller": {
+            "fixtureCaller": "A"
+          }
+        }
+      ],
+      "valid": true,
+      "output": {
+        "result": {
+          "deliver": {
+            "kind": "deliver",
+            "requestId": "first",
+            "payloads": [
+              {
+                "message": "first"
+              }
+            ],
+            "caller": {
+              "fixtureCaller": "A"
+            }
+          },
+          "kind": "turn",
+          "remainder": {
+            "message": "first"
+          }
+        },
+        "remaining": [
+          {
+            "kind": "deliver",
+            "requestId": "second",
+            "payloads": [
+              {
+                "message": "second"
+              }
+            ],
+            "caller": {
+              "fixtureCaller": "A"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "kind": "deliveries",
+      "name": "null-caller",
+      "deliveries": [
+        {
+          "kind": "deliver",
+          "requestId": "first",
+          "payloads": [
+            {
+              "message": "first"
+            }
+          ],
+          "caller": null
+        },
+        {
+          "kind": "deliver",
+          "requestId": "second",
+          "payloads": [
+            {
+              "message": "second"
+            }
+          ]
+        }
+      ],
+      "valid": true,
+      "output": {
+        "kind": "deliver",
+        "requestId": "first",
+        "payloads": [
+          {
+            "message": "first"
+          },
+          {
+            "message": "second"
+          }
+        ],
+        "caller": null
+      }
+    },
+    {
+      "kind": "prefix",
+      "name": "null-caller",
+      "deliveries": [
+        {
+          "kind": "deliver",
+          "requestId": "first",
+          "payloads": [
+            {
+              "message": "first"
+            }
+          ],
+          "caller": null
+        },
+        {
+          "kind": "deliver",
+          "requestId": "second",
+          "payloads": [
+            {
+              "message": "second"
+            }
+          ]
+        }
+      ],
+      "valid": true,
+      "output": {
+        "result": {
+          "deliver": {
+            "kind": "deliver",
+            "requestId": "first",
+            "payloads": [
+              {
+                "message": "first"
+              },
+              {
+                "message": "second"
+              }
+            ],
+            "caller": null
+          },
+          "kind": "turn",
+          "remainder": {
+            "message": "first\n\nsecond"
+          }
+        },
+        "remaining": []
+      }
+    },
+    {
+      "kind": "deliveries",
+      "name": "null-caller-barrier",
+      "deliveries": [
+        {
+          "kind": "deliver",
+          "requestId": "first",
+          "payloads": [
+            {
+              "message": "first"
+            }
+          ],
+          "caller": null
+        },
+        {
+          "kind": "deliver",
+          "requestId": "second",
+          "payloads": [
+            {
+              "message": "second"
+            }
+          ],
+          "caller": {
+            "fixtureCaller": "C"
+          }
+        }
+      ],
+      "valid": false
+    },
+    {
+      "kind": "prefix",
+      "name": "null-caller-barrier",
+      "deliveries": [
+        {
+          "kind": "deliver",
+          "requestId": "first",
+          "payloads": [
+            {
+              "message": "first"
+            }
+          ],
+          "caller": null
+        },
+        {
+          "kind": "deliver",
+          "requestId": "second",
+          "payloads": [
+            {
+              "message": "second"
+            }
+          ],
+          "caller": {
+            "fixtureCaller": "C"
+          }
+        }
+      ],
+      "valid": true,
+      "output": {
+        "result": {
+          "deliver": {
+            "kind": "deliver",
+            "requestId": "first",
+            "payloads": [
+              {
+                "message": "first"
+              }
+            ],
+            "caller": null
+          },
+          "kind": "turn",
+          "remainder": {
+            "message": "first"
+          }
+        },
+        "remaining": [
+          {
+            "kind": "deliver",
+            "requestId": "second",
+            "payloads": [
+              {
+                "message": "second"
+              }
+            ],
+            "caller": {
+              "fixtureCaller": "C"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "kind": "deliveries",
+      "name": "null-caller-then-absent-then-defined",
+      "deliveries": [
+        {
+          "kind": "deliver",
+          "requestId": "first",
+          "payloads": [
+            {
+              "message": "first"
+            }
+          ],
+          "caller": null
+        },
+        {
+          "kind": "deliver",
+          "requestId": "middle",
+          "payloads": [
+            {
+              "message": "middle"
+            }
+          ]
+        },
+        {
+          "kind": "deliver",
+          "requestId": "last",
+          "payloads": [
+            {
+              "message": "last"
+            }
+          ],
+          "caller": {
+            "fixtureCaller": "C"
+          }
+        }
+      ],
+      "valid": false
+    },
+    {
+      "kind": "prefix",
+      "name": "null-caller-then-absent-then-defined",
+      "deliveries": [
+        {
+          "kind": "deliver",
+          "requestId": "first",
+          "payloads": [
+            {
+              "message": "first"
+            }
+          ],
+          "caller": null
+        },
+        {
+          "kind": "deliver",
+          "requestId": "middle",
+          "payloads": [
+            {
+              "message": "middle"
+            }
+          ]
+        },
+        {
+          "kind": "deliver",
+          "requestId": "last",
+          "payloads": [
+            {
+              "message": "last"
+            }
+          ],
+          "caller": {
+            "fixtureCaller": "C"
+          }
+        }
+      ],
+      "valid": false
+    },
+    {
+      "kind": "deliveries",
+      "name": "callerless-prefix",
+      "deliveries": [
+        {
+          "kind": "deliver",
+          "requestId": "first",
+          "payloads": [
+            {
+              "message": "first"
+            }
+          ]
+        },
+        {
+          "kind": "deliver",
+          "requestId": "middle",
+          "payloads": [
+            {
+              "message": "middle"
+            }
+          ],
+          "caller": {
+            "fixtureCaller": "B"
+          }
+        },
+        {
+          "kind": "deliver",
+          "requestId": "third",
+          "payloads": [
+            {
+              "message": "third"
+            }
+          ]
+        },
+        {
+          "kind": "deliver",
+          "requestId": "fourth",
+          "payloads": [
+            {
+              "message": "fourth"
+            }
+          ],
+          "caller": {
+            "fixtureCaller": "D"
+          }
+        },
+        {
+          "kind": "deliver",
+          "requestId": "last",
+          "payloads": [
+            {
+              "message": "last"
+            }
+          ]
+        }
+      ],
+      "valid": false
+    },
+    {
+      "kind": "prefix",
+      "name": "callerless-prefix",
+      "deliveries": [
+        {
+          "kind": "deliver",
+          "requestId": "first",
+          "payloads": [
+            {
+              "message": "first"
+            }
+          ]
+        },
+        {
+          "kind": "deliver",
+          "requestId": "middle",
+          "payloads": [
+            {
+              "message": "middle"
+            }
+          ],
+          "caller": {
+            "fixtureCaller": "B"
+          }
+        },
+        {
+          "kind": "deliver",
+          "requestId": "third",
+          "payloads": [
+            {
+              "message": "third"
+            }
+          ]
+        },
+        {
+          "kind": "deliver",
+          "requestId": "fourth",
+          "payloads": [
+            {
+              "message": "fourth"
+            }
+          ],
+          "caller": {
+            "fixtureCaller": "D"
+          }
+        },
+        {
+          "kind": "deliver",
+          "requestId": "last",
+          "payloads": [
+            {
+              "message": "last"
+            }
+          ]
+        }
+      ],
+      "valid": true,
+      "output": {
+        "result": {
+          "deliver": {
+            "kind": "deliver",
+            "requestId": "first",
+            "payloads": [
+              {
+                "message": "first"
+              },
+              {
+                "message": "middle"
+              },
+              {
+                "message": "third"
+              }
+            ],
+            "caller": {
+              "fixtureCaller": "B"
+            }
+          },
+          "kind": "turn",
+          "remainder": {
+            "message": "first\n\nmiddle\n\nthird"
+          }
+        },
+        "remaining": [
+          {
+            "kind": "deliver",
+            "requestId": "fourth",
+            "payloads": [
+              {
+                "message": "fourth"
+              }
+            ],
+            "caller": {
+              "fixtureCaller": "D"
+            }
+          },
+          {
+            "kind": "deliver",
+            "requestId": "last",
+            "payloads": [
+              {
+                "message": "last"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "kind": "deliveries",
+      "name": "payload-order",
+      "deliveries": [
+        {
+          "kind": "deliver",
+          "requestId": "first",
+          "payloads": [
+            {
+              "inputResponses": [
+                {
+                  "requestId": "approval",
+                  "optionId": "approve"
+                }
+              ]
+            },
+            {
+              "message": "context"
+            }
+          ]
+        },
+        {
+          "kind": "deliver",
+          "requestId": "last",
+          "payloads": [
+            {
+              "inputResponses": [
+                {
+                  "requestId": "approval",
+                  "optionId": "deny"
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "valid": true,
+      "output": {
+        "kind": "deliver",
+        "requestId": "first",
+        "payloads": [
+          {
+            "inputResponses": [
+              {
+                "requestId": "approval",
+                "optionId": "approve"
+              }
+            ]
+          },
+          {
+            "message": "context"
+          },
+          {
+            "inputResponses": [
+              {
+                "requestId": "approval",
+                "optionId": "deny"
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "kind": "prefix",
+      "name": "payload-order",
+      "deliveries": [
+        {
+          "kind": "deliver",
+          "requestId": "first",
+          "payloads": [
+            {
+              "inputResponses": [
+                {
+                  "requestId": "approval",
+                  "optionId": "approve"
+                }
+              ]
+            },
+            {
+              "message": "context"
+            }
+          ]
+        },
+        {
+          "kind": "deliver",
+          "requestId": "last",
+          "payloads": [
+            {
+              "inputResponses": [
+                {
+                  "requestId": "approval",
+                  "optionId": "deny"
+                }
+              ]
+            }
+          ]
+        }
+      ],
+      "valid": true,
+      "output": {
+        "result": {
+          "deliver": {
+            "kind": "deliver",
+            "requestId": "first",
+            "payloads": [
+              {
+                "inputResponses": [
+                  {
+                    "requestId": "approval",
+                    "optionId": "approve"
+                  }
+                ]
+              },
+              {
+                "message": "context"
+              },
+              {
+                "inputResponses": [
+                  {
+                    "requestId": "approval",
+                    "optionId": "deny"
+                  }
+                ]
+              }
+            ]
+          },
+          "kind": "turn",
+          "remainder": {
+            "inputResponses": [
+              {
+                "requestId": "approval",
+                "optionId": "approve"
+              },
+              {
+                "requestId": "approval",
+                "optionId": "deny"
+              }
+            ],
+            "message": "context"
+          }
+        },
+        "remaining": []
+      }
+    },
+    {
+      "kind": "payloads",
+      "name": "empty",
+      "payloads": [],
+      "valid": true,
+      "output": {}
+    },
+    {
+      "kind": "payloads",
+      "name": "single-null",
+      "payloads": [
+        null
+      ],
+      "valid": true,
+      "output": {}
+    },
+    {
+      "kind": "payloads",
+      "name": "single/0",
+      "payloads": [
+        {}
+      ],
+      "valid": true,
+      "output": {}
+    },
+    {
+      "kind": "payloads",
+      "name": "pair/0/0",
+      "payloads": [
+        {},
+        {}
+      ],
+      "valid": true,
+      "output": {}
+    },
+    {
+      "kind": "payloads",
+      "name": "pair/0/1",
+      "payloads": [
+        {},
+        {
+          "message": "first"
+        }
+      ],
+      "valid": true,
+      "output": {
+        "message": "first"
+      }
+    },
+    {
+      "kind": "payloads",
+      "name": "pair/0/2",
+      "payloads": [
+        {},
+        {
+          "message": " second "
+        }
+      ],
+      "valid": true,
+      "output": {
+        "message": " second "
+      }
+    },
+    {
+      "kind": "payloads",
+      "name": "pair/0/3",
+      "payloads": [
+        {},
+        {
+          "message": " ﻿ "
+        }
+      ],
+      "valid": true,
+      "output": {}
+    },
+    {
+      "kind": "payloads",
+      "name": "pair/0/4",
+      "payloads": [
+        {},
+        {
+          "message": [
+            {
+              "type": "text",
+              "text": "file context"
+            },
+            {
+              "type": "file",
+              "data": "fixture-bytes"
+            }
+          ]
+        }
+      ],
+      "valid": true,
+      "output": {
+        "message": [
+          {
+            "type": "text",
+            "text": "file context"
+          },
+          {
+            "type": "file",
+            "data": "fixture-bytes"
+          }
+        ]
+      }
+    },
+    {
+      "kind": "payloads",
+      "name": "pair/0/5",
+      "payloads": [
+        {},
+        {
+          "inputResponses": [
+            {
+              "requestId": "approval",
+              "optionId": "approve"
+            }
+          ],
+          "context": [
+            "first"
+          ],
+          "outputSchema": {
+            "type": "string"
+          },
+          "messageConsumed": true,
+          "extra": "first"
+        }
+      ],
+      "valid": true,
+      "output": {
+        "messageConsumed": true,
+        "extra": "first",
+        "inputResponses": [
+          {
+            "requestId": "approval",
+            "optionId": "approve"
+          }
+        ],
+        "context": [
+          "first"
+        ],
+        "outputSchema": {
+          "type": "string"
+        }
+      }
+    },
+    {
+      "kind": "payloads",
+      "name": "pair/0/6",
+      "payloads": [
+        {},
+        {
+          "inputResponses": [
+            {
+              "requestId": "approval",
+              "optionId": "deny"
+            }
+          ],
+          "context": [
+            "last"
+          ],
+          "outputSchema": null,
+          "messageConsumed": false,
+          "extra": null
+        }
+      ],
+      "valid": true,
+      "output": {
+        "messageConsumed": false,
+        "extra": null,
+        "inputResponses": [
+          {
+            "requestId": "approval",
+            "optionId": "deny"
+          }
+        ],
+        "context": [
+          "last"
+        ]
+      }
+    },
+    {
+      "kind": "payloads",
+      "name": "pair/0/7",
+      "payloads": [
+        {},
+        {
+          "runtimeActionResults": [
+            {
+              "fixtureResult": "first"
+            }
+          ],
+          "extra": "last"
+        }
+      ],
+      "valid": true,
+      "output": {
+        "runtimeActionResults": [
+          {
+            "fixtureResult": "first"
+          }
+        ],
+        "extra": "last"
+      }
+    },
+    {
+      "kind": "payloads",
+      "name": "single/1",
+      "payloads": [
+        {
+          "message": "first"
+        }
+      ],
+      "valid": true,
+      "output": {
+        "message": "first"
+      }
+    },
+    {
+      "kind": "payloads",
+      "name": "pair/1/0",
+      "payloads": [
+        {
+          "message": "first"
+        },
+        {}
+      ],
+      "valid": true,
+      "output": {
+        "message": "first"
+      }
+    },
+    {
+      "kind": "payloads",
+      "name": "pair/1/1",
+      "payloads": [
+        {
+          "message": "first"
+        },
+        {
+          "message": "first"
+        }
+      ],
+      "valid": true,
+      "output": {
+        "message": "first\n\nfirst"
+      }
+    },
+    {
+      "kind": "payloads",
+      "name": "pair/1/2",
+      "payloads": [
+        {
+          "message": "first"
+        },
+        {
+          "message": " second "
+        }
+      ],
+      "valid": true,
+      "output": {
+        "message": "first\n\n second "
+      }
+    },
+    {
+      "kind": "payloads",
+      "name": "pair/1/3",
+      "payloads": [
+        {
+          "message": "first"
+        },
+        {
+          "message": " ﻿ "
+        }
+      ],
+      "valid": true,
+      "output": {
+        "message": "first"
+      }
+    },
+    {
+      "kind": "payloads",
+      "name": "pair/1/4",
+      "payloads": [
+        {
+          "message": "first"
+        },
+        {
+          "message": [
+            {
+              "type": "text",
+              "text": "file context"
+            },
+            {
+              "type": "file",
+              "data": "fixture-bytes"
+            }
+          ]
+        }
+      ],
+      "valid": true,
+      "output": {
+        "message": [
+          {
+            "type": "text",
+            "text": "first"
+          },
+          {
+            "type": "text",
+            "text": "file context"
+          },
+          {
+            "type": "file",
+            "data": "fixture-bytes"
+          }
+        ]
+      }
+    },
+    {
+      "kind": "payloads",
+      "name": "pair/1/5",
+      "payloads": [
+        {
+          "message": "first"
+        },
+        {
+          "inputResponses": [
+            {
+              "requestId": "approval",
+              "optionId": "approve"
+            }
+          ],
+          "context": [
+            "first"
+          ],
+          "outputSchema": {
+            "type": "string"
+          },
+          "messageConsumed": true,
+          "extra": "first"
+        }
+      ],
+      "valid": true,
+      "output": {
+        "messageConsumed": true,
+        "extra": "first",
+        "inputResponses": [
+          {
+            "requestId": "approval",
+            "optionId": "approve"
+          }
+        ],
+        "message": "first",
+        "context": [
+          "first"
+        ],
+        "outputSchema": {
+          "type": "string"
+        }
+      }
+    },
+    {
+      "kind": "payloads",
+      "name": "pair/1/6",
+      "payloads": [
+        {
+          "message": "first"
+        },
+        {
+          "inputResponses": [
+            {
+              "requestId": "approval",
+              "optionId": "deny"
+            }
+          ],
+          "context": [
+            "last"
+          ],
+          "outputSchema": null,
+          "messageConsumed": false,
+          "extra": null
+        }
+      ],
+      "valid": true,
+      "output": {
+        "messageConsumed": false,
+        "extra": null,
+        "inputResponses": [
+          {
+            "requestId": "approval",
+            "optionId": "deny"
+          }
+        ],
+        "message": "first",
+        "context": [
+          "last"
+        ]
+      }
+    },
+    {
+      "kind": "payloads",
+      "name": "pair/1/7",
+      "payloads": [
+        {
+          "message": "first"
+        },
+        {
+          "runtimeActionResults": [
+            {
+              "fixtureResult": "first"
+            }
+          ],
+          "extra": "last"
+        }
+      ],
+      "valid": true,
+      "output": {
+        "runtimeActionResults": [
+          {
+            "fixtureResult": "first"
+          }
+        ],
+        "extra": "last",
+        "message": "first"
+      }
+    },
+    {
+      "kind": "payloads",
+      "name": "single/2",
+      "payloads": [
+        {
+          "message": " second "
+        }
+      ],
+      "valid": true,
+      "output": {
+        "message": " second "
+      }
+    },
+    {
+      "kind": "payloads",
+      "name": "pair/2/0",
+      "payloads": [
+        {
+          "message": " second "
+        },
+        {}
+      ],
+      "valid": true,
+      "output": {
+        "message": " second "
+      }
+    },
+    {
+      "kind": "payloads",
+      "name": "pair/2/1",
+      "payloads": [
+        {
+          "message": " second "
+        },
+        {
+          "message": "first"
+        }
+      ],
+      "valid": true,
+      "output": {
+        "message": " second \n\nfirst"
+      }
+    },
+    {
+      "kind": "payloads",
+      "name": "pair/2/2",
+      "payloads": [
+        {
+          "message": " second "
+        },
+        {
+          "message": " second "
+        }
+      ],
+      "valid": true,
+      "output": {
+        "message": " second \n\n second "
+      }
+    },
+    {
+      "kind": "payloads",
+      "name": "pair/2/3",
+      "payloads": [
+        {
+          "message": " second "
+        },
+        {
+          "message": " ﻿ "
+        }
+      ],
+      "valid": true,
+      "output": {
+        "message": " second "
+      }
+    },
+    {
+      "kind": "payloads",
+      "name": "pair/2/4",
+      "payloads": [
+        {
+          "message": " second "
+        },
+        {
+          "message": [
+            {
+              "type": "text",
+              "text": "file context"
+            },
+            {
+              "type": "file",
+              "data": "fixture-bytes"
+            }
+          ]
+        }
+      ],
+      "valid": true,
+      "output": {
+        "message": [
+          {
+            "type": "text",
+            "text": " second "
+          },
+          {
+            "type": "text",
+            "text": "file context"
+          },
+          {
+            "type": "file",
+            "data": "fixture-bytes"
+          }
+        ]
+      }
+    },
+    {
+      "kind": "payloads",
+      "name": "pair/2/5",
+      "payloads": [
+        {
+          "message": " second "
+        },
+        {
+          "inputResponses": [
+            {
+              "requestId": "approval",
+              "optionId": "approve"
+            }
+          ],
+          "context": [
+            "first"
+          ],
+          "outputSchema": {
+            "type": "string"
+          },
+          "messageConsumed": true,
+          "extra": "first"
+        }
+      ],
+      "valid": true,
+      "output": {
+        "messageConsumed": true,
+        "extra": "first",
+        "inputResponses": [
+          {
+            "requestId": "approval",
+            "optionId": "approve"
+          }
+        ],
+        "message": " second ",
+        "context": [
+          "first"
+        ],
+        "outputSchema": {
+          "type": "string"
+        }
+      }
+    },
+    {
+      "kind": "payloads",
+      "name": "pair/2/6",
+      "payloads": [
+        {
+          "message": " second "
+        },
+        {
+          "inputResponses": [
+            {
+              "requestId": "approval",
+              "optionId": "deny"
+            }
+          ],
+          "context": [
+            "last"
+          ],
+          "outputSchema": null,
+          "messageConsumed": false,
+          "extra": null
+        }
+      ],
+      "valid": true,
+      "output": {
+        "messageConsumed": false,
+        "extra": null,
+        "inputResponses": [
+          {
+            "requestId": "approval",
+            "optionId": "deny"
+          }
+        ],
+        "message": " second ",
+        "context": [
+          "last"
+        ]
+      }
+    },
+    {
+      "kind": "payloads",
+      "name": "pair/2/7",
+      "payloads": [
+        {
+          "message": " second "
+        },
+        {
+          "runtimeActionResults": [
+            {
+              "fixtureResult": "first"
+            }
+          ],
+          "extra": "last"
+        }
+      ],
+      "valid": true,
+      "output": {
+        "runtimeActionResults": [
+          {
+            "fixtureResult": "first"
+          }
+        ],
+        "extra": "last",
+        "message": " second "
+      }
+    },
+    {
+      "kind": "payloads",
+      "name": "single/3",
+      "payloads": [
+        {
+          "message": " ﻿ "
+        }
+      ],
+      "valid": true,
+      "output": {
+        "message": " ﻿ "
+      }
+    },
+    {
+      "kind": "payloads",
+      "name": "pair/3/0",
+      "payloads": [
+        {
+          "message": " ﻿ "
+        },
+        {}
+      ],
+      "valid": true,
+      "output": {}
+    },
+    {
+      "kind": "payloads",
+      "name": "pair/3/1",
+      "payloads": [
+        {
+          "message": " ﻿ "
+        },
+        {
+          "message": "first"
+        }
+      ],
+      "valid": true,
+      "output": {
+        "message": "first"
+      }
+    },
+    {
+      "kind": "payloads",
+      "name": "pair/3/2",
+      "payloads": [
+        {
+          "message": " ﻿ "
+        },
+        {
+          "message": " second "
+        }
+      ],
+      "valid": true,
+      "output": {
+        "message": " second "
+      }
+    },
+    {
+      "kind": "payloads",
+      "name": "pair/3/3",
+      "payloads": [
+        {
+          "message": " ﻿ "
+        },
+        {
+          "message": " ﻿ "
+        }
+      ],
+      "valid": true,
+      "output": {}
+    },
+    {
+      "kind": "payloads",
+      "name": "pair/3/4",
+      "payloads": [
+        {
+          "message": " ﻿ "
+        },
+        {
+          "message": [
+            {
+              "type": "text",
+              "text": "file context"
+            },
+            {
+              "type": "file",
+              "data": "fixture-bytes"
+            }
+          ]
+        }
+      ],
+      "valid": true,
+      "output": {
+        "message": [
+          {
+            "type": "text",
+            "text": "file context"
+          },
+          {
+            "type": "file",
+            "data": "fixture-bytes"
+          }
+        ]
+      }
+    },
+    {
+      "kind": "payloads",
+      "name": "pair/3/5",
+      "payloads": [
+        {
+          "message": " ﻿ "
+        },
+        {
+          "inputResponses": [
+            {
+              "requestId": "approval",
+              "optionId": "approve"
+            }
+          ],
+          "context": [
+            "first"
+          ],
+          "outputSchema": {
+            "type": "string"
+          },
+          "messageConsumed": true,
+          "extra": "first"
+        }
+      ],
+      "valid": true,
+      "output": {
+        "messageConsumed": true,
+        "extra": "first",
+        "inputResponses": [
+          {
+            "requestId": "approval",
+            "optionId": "approve"
+          }
+        ],
+        "context": [
+          "first"
+        ],
+        "outputSchema": {
+          "type": "string"
+        }
+      }
+    },
+    {
+      "kind": "payloads",
+      "name": "pair/3/6",
+      "payloads": [
+        {
+          "message": " ﻿ "
+        },
+        {
+          "inputResponses": [
+            {
+              "requestId": "approval",
+              "optionId": "deny"
+            }
+          ],
+          "context": [
+            "last"
+          ],
+          "outputSchema": null,
+          "messageConsumed": false,
+          "extra": null
+        }
+      ],
+      "valid": true,
+      "output": {
+        "messageConsumed": false,
+        "extra": null,
+        "inputResponses": [
+          {
+            "requestId": "approval",
+            "optionId": "deny"
+          }
+        ],
+        "context": [
+          "last"
+        ]
+      }
+    },
+    {
+      "kind": "payloads",
+      "name": "pair/3/7",
+      "payloads": [
+        {
+          "message": " ﻿ "
+        },
+        {
+          "runtimeActionResults": [
+            {
+              "fixtureResult": "first"
+            }
+          ],
+          "extra": "last"
+        }
+      ],
+      "valid": true,
+      "output": {
+        "runtimeActionResults": [
+          {
+            "fixtureResult": "first"
+          }
+        ],
+        "extra": "last"
+      }
+    },
+    {
+      "kind": "payloads",
+      "name": "single/4",
+      "payloads": [
+        {
+          "message": [
+            {
+              "type": "text",
+              "text": "file context"
+            },
+            {
+              "type": "file",
+              "data": "fixture-bytes"
+            }
+          ]
+        }
+      ],
+      "valid": true,
+      "output": {
+        "message": [
+          {
+            "type": "text",
+            "text": "file context"
+          },
+          {
+            "type": "file",
+            "data": "fixture-bytes"
+          }
+        ]
+      }
+    },
+    {
+      "kind": "payloads",
+      "name": "pair/4/0",
+      "payloads": [
+        {
+          "message": [
+            {
+              "type": "text",
+              "text": "file context"
+            },
+            {
+              "type": "file",
+              "data": "fixture-bytes"
+            }
+          ]
+        },
+        {}
+      ],
+      "valid": true,
+      "output": {
+        "message": [
+          {
+            "type": "text",
+            "text": "file context"
+          },
+          {
+            "type": "file",
+            "data": "fixture-bytes"
+          }
+        ]
+      }
+    },
+    {
+      "kind": "payloads",
+      "name": "pair/4/1",
+      "payloads": [
+        {
+          "message": [
+            {
+              "type": "text",
+              "text": "file context"
+            },
+            {
+              "type": "file",
+              "data": "fixture-bytes"
+            }
+          ]
+        },
+        {
+          "message": "first"
+        }
+      ],
+      "valid": true,
+      "output": {
+        "message": [
+          {
+            "type": "text",
+            "text": "file context"
+          },
+          {
+            "type": "file",
+            "data": "fixture-bytes"
+          },
+          {
+            "type": "text",
+            "text": "first"
+          }
+        ]
+      }
+    },
+    {
+      "kind": "payloads",
+      "name": "pair/4/2",
+      "payloads": [
+        {
+          "message": [
+            {
+              "type": "text",
+              "text": "file context"
+            },
+            {
+              "type": "file",
+              "data": "fixture-bytes"
+            }
+          ]
+        },
+        {
+          "message": " second "
+        }
+      ],
+      "valid": true,
+      "output": {
+        "message": [
+          {
+            "type": "text",
+            "text": "file context"
+          },
+          {
+            "type": "file",
+            "data": "fixture-bytes"
+          },
+          {
+            "type": "text",
+            "text": " second "
+          }
+        ]
+      }
+    },
+    {
+      "kind": "payloads",
+      "name": "pair/4/3",
+      "payloads": [
+        {
+          "message": [
+            {
+              "type": "text",
+              "text": "file context"
+            },
+            {
+              "type": "file",
+              "data": "fixture-bytes"
+            }
+          ]
+        },
+        {
+          "message": " ﻿ "
+        }
+      ],
+      "valid": true,
+      "output": {
+        "message": [
+          {
+            "type": "text",
+            "text": "file context"
+          },
+          {
+            "type": "file",
+            "data": "fixture-bytes"
+          }
+        ]
+      }
+    },
+    {
+      "kind": "payloads",
+      "name": "pair/4/4",
+      "payloads": [
+        {
+          "message": [
+            {
+              "type": "text",
+              "text": "file context"
+            },
+            {
+              "type": "file",
+              "data": "fixture-bytes"
+            }
+          ]
+        },
+        {
+          "message": [
+            {
+              "type": "text",
+              "text": "file context"
+            },
+            {
+              "type": "file",
+              "data": "fixture-bytes"
+            }
+          ]
+        }
+      ],
+      "valid": true,
+      "output": {
+        "message": [
+          {
+            "type": "text",
+            "text": "file context"
+          },
+          {
+            "type": "file",
+            "data": "fixture-bytes"
+          },
+          {
+            "type": "text",
+            "text": "file context"
+          },
+          {
+            "type": "file",
+            "data": "fixture-bytes"
+          }
+        ]
+      }
+    },
+    {
+      "kind": "payloads",
+      "name": "pair/4/5",
+      "payloads": [
+        {
+          "message": [
+            {
+              "type": "text",
+              "text": "file context"
+            },
+            {
+              "type": "file",
+              "data": "fixture-bytes"
+            }
+          ]
+        },
+        {
+          "inputResponses": [
+            {
+              "requestId": "approval",
+              "optionId": "approve"
+            }
+          ],
+          "context": [
+            "first"
+          ],
+          "outputSchema": {
+            "type": "string"
+          },
+          "messageConsumed": true,
+          "extra": "first"
+        }
+      ],
+      "valid": true,
+      "output": {
+        "messageConsumed": true,
+        "extra": "first",
+        "inputResponses": [
+          {
+            "requestId": "approval",
+            "optionId": "approve"
+          }
+        ],
+        "message": [
+          {
+            "type": "text",
+            "text": "file context"
+          },
+          {
+            "type": "file",
+            "data": "fixture-bytes"
+          }
+        ],
+        "context": [
+          "first"
+        ],
+        "outputSchema": {
+          "type": "string"
+        }
+      }
+    },
+    {
+      "kind": "payloads",
+      "name": "pair/4/6",
+      "payloads": [
+        {
+          "message": [
+            {
+              "type": "text",
+              "text": "file context"
+            },
+            {
+              "type": "file",
+              "data": "fixture-bytes"
+            }
+          ]
+        },
+        {
+          "inputResponses": [
+            {
+              "requestId": "approval",
+              "optionId": "deny"
+            }
+          ],
+          "context": [
+            "last"
+          ],
+          "outputSchema": null,
+          "messageConsumed": false,
+          "extra": null
+        }
+      ],
+      "valid": true,
+      "output": {
+        "messageConsumed": false,
+        "extra": null,
+        "inputResponses": [
+          {
+            "requestId": "approval",
+            "optionId": "deny"
+          }
+        ],
+        "message": [
+          {
+            "type": "text",
+            "text": "file context"
+          },
+          {
+            "type": "file",
+            "data": "fixture-bytes"
+          }
+        ],
+        "context": [
+          "last"
+        ]
+      }
+    },
+    {
+      "kind": "payloads",
+      "name": "pair/4/7",
+      "payloads": [
+        {
+          "message": [
+            {
+              "type": "text",
+              "text": "file context"
+            },
+            {
+              "type": "file",
+              "data": "fixture-bytes"
+            }
+          ]
+        },
+        {
+          "runtimeActionResults": [
+            {
+              "fixtureResult": "first"
+            }
+          ],
+          "extra": "last"
+        }
+      ],
+      "valid": true,
+      "output": {
+        "runtimeActionResults": [
+          {
+            "fixtureResult": "first"
+          }
+        ],
+        "extra": "last",
+        "message": [
+          {
+            "type": "text",
+            "text": "file context"
+          },
+          {
+            "type": "file",
+            "data": "fixture-bytes"
+          }
+        ]
+      }
+    },
+    {
+      "kind": "payloads",
+      "name": "single/5",
+      "payloads": [
+        {
+          "inputResponses": [
+            {
+              "requestId": "approval",
+              "optionId": "approve"
+            }
+          ],
+          "context": [
+            "first"
+          ],
+          "outputSchema": {
+            "type": "string"
+          },
+          "messageConsumed": true,
+          "extra": "first"
+        }
+      ],
+      "valid": true,
+      "output": {
+        "inputResponses": [
+          {
+            "requestId": "approval",
+            "optionId": "approve"
+          }
+        ],
+        "context": [
+          "first"
+        ],
+        "outputSchema": {
+          "type": "string"
+        },
+        "messageConsumed": true,
+        "extra": "first"
+      }
+    },
+    {
+      "kind": "payloads",
+      "name": "pair/5/0",
+      "payloads": [
+        {
+          "inputResponses": [
+            {
+              "requestId": "approval",
+              "optionId": "approve"
+            }
+          ],
+          "context": [
+            "first"
+          ],
+          "outputSchema": {
+            "type": "string"
+          },
+          "messageConsumed": true,
+          "extra": "first"
+        },
+        {}
+      ],
+      "valid": true,
+      "output": {
+        "messageConsumed": true,
+        "extra": "first",
+        "inputResponses": [
+          {
+            "requestId": "approval",
+            "optionId": "approve"
+          }
+        ],
+        "context": [
+          "first"
+        ],
+        "outputSchema": {
+          "type": "string"
+        }
+      }
+    },
+    {
+      "kind": "payloads",
+      "name": "pair/5/1",
+      "payloads": [
+        {
+          "inputResponses": [
+            {
+              "requestId": "approval",
+              "optionId": "approve"
+            }
+          ],
+          "context": [
+            "first"
+          ],
+          "outputSchema": {
+            "type": "string"
+          },
+          "messageConsumed": true,
+          "extra": "first"
+        },
+        {
+          "message": "first"
+        }
+      ],
+      "valid": true,
+      "output": {
+        "messageConsumed": true,
+        "extra": "first",
+        "inputResponses": [
+          {
+            "requestId": "approval",
+            "optionId": "approve"
+          }
+        ],
+        "message": "first",
+        "context": [
+          "first"
+        ],
+        "outputSchema": {
+          "type": "string"
+        }
+      }
+    },
+    {
+      "kind": "payloads",
+      "name": "pair/5/2",
+      "payloads": [
+        {
+          "inputResponses": [
+            {
+              "requestId": "approval",
+              "optionId": "approve"
+            }
+          ],
+          "context": [
+            "first"
+          ],
+          "outputSchema": {
+            "type": "string"
+          },
+          "messageConsumed": true,
+          "extra": "first"
+        },
+        {
+          "message": " second "
+        }
+      ],
+      "valid": true,
+      "output": {
+        "messageConsumed": true,
+        "extra": "first",
+        "inputResponses": [
+          {
+            "requestId": "approval",
+            "optionId": "approve"
+          }
+        ],
+        "message": " second ",
+        "context": [
+          "first"
+        ],
+        "outputSchema": {
+          "type": "string"
+        }
+      }
+    },
+    {
+      "kind": "payloads",
+      "name": "pair/5/3",
+      "payloads": [
+        {
+          "inputResponses": [
+            {
+              "requestId": "approval",
+              "optionId": "approve"
+            }
+          ],
+          "context": [
+            "first"
+          ],
+          "outputSchema": {
+            "type": "string"
+          },
+          "messageConsumed": true,
+          "extra": "first"
+        },
+        {
+          "message": " ﻿ "
+        }
+      ],
+      "valid": true,
+      "output": {
+        "messageConsumed": true,
+        "extra": "first",
+        "inputResponses": [
+          {
+            "requestId": "approval",
+            "optionId": "approve"
+          }
+        ],
+        "context": [
+          "first"
+        ],
+        "outputSchema": {
+          "type": "string"
+        }
+      }
+    },
+    {
+      "kind": "payloads",
+      "name": "pair/5/4",
+      "payloads": [
+        {
+          "inputResponses": [
+            {
+              "requestId": "approval",
+              "optionId": "approve"
+            }
+          ],
+          "context": [
+            "first"
+          ],
+          "outputSchema": {
+            "type": "string"
+          },
+          "messageConsumed": true,
+          "extra": "first"
+        },
+        {
+          "message": [
+            {
+              "type": "text",
+              "text": "file context"
+            },
+            {
+              "type": "file",
+              "data": "fixture-bytes"
+            }
+          ]
+        }
+      ],
+      "valid": true,
+      "output": {
+        "messageConsumed": true,
+        "extra": "first",
+        "inputResponses": [
+          {
+            "requestId": "approval",
+            "optionId": "approve"
+          }
+        ],
+        "message": [
+          {
+            "type": "text",
+            "text": "file context"
+          },
+          {
+            "type": "file",
+            "data": "fixture-bytes"
+          }
+        ],
+        "context": [
+          "first"
+        ],
+        "outputSchema": {
+          "type": "string"
+        }
+      }
+    },
+    {
+      "kind": "payloads",
+      "name": "pair/5/5",
+      "payloads": [
+        {
+          "inputResponses": [
+            {
+              "requestId": "approval",
+              "optionId": "approve"
+            }
+          ],
+          "context": [
+            "first"
+          ],
+          "outputSchema": {
+            "type": "string"
+          },
+          "messageConsumed": true,
+          "extra": "first"
+        },
+        {
+          "inputResponses": [
+            {
+              "requestId": "approval",
+              "optionId": "approve"
+            }
+          ],
+          "context": [
+            "first"
+          ],
+          "outputSchema": {
+            "type": "string"
+          },
+          "messageConsumed": true,
+          "extra": "first"
+        }
+      ],
+      "valid": true,
+      "output": {
+        "messageConsumed": true,
+        "extra": "first",
+        "inputResponses": [
+          {
+            "requestId": "approval",
+            "optionId": "approve"
+          },
+          {
+            "requestId": "approval",
+            "optionId": "approve"
+          }
+        ],
+        "context": [
+          "first",
+          "first"
+        ],
+        "outputSchema": {
+          "type": "string"
+        }
+      }
+    },
+    {
+      "kind": "payloads",
+      "name": "pair/5/6",
+      "payloads": [
+        {
+          "inputResponses": [
+            {
+              "requestId": "approval",
+              "optionId": "approve"
+            }
+          ],
+          "context": [
+            "first"
+          ],
+          "outputSchema": {
+            "type": "string"
+          },
+          "messageConsumed": true,
+          "extra": "first"
+        },
+        {
+          "inputResponses": [
+            {
+              "requestId": "approval",
+              "optionId": "deny"
+            }
+          ],
+          "context": [
+            "last"
+          ],
+          "outputSchema": null,
+          "messageConsumed": false,
+          "extra": null
+        }
+      ],
+      "valid": true,
+      "output": {
+        "messageConsumed": false,
+        "extra": null,
+        "inputResponses": [
+          {
+            "requestId": "approval",
+            "optionId": "approve"
+          },
+          {
+            "requestId": "approval",
+            "optionId": "deny"
+          }
+        ],
+        "context": [
+          "first",
+          "last"
+        ],
+        "outputSchema": {
+          "type": "string"
+        }
+      }
+    },
+    {
+      "kind": "payloads",
+      "name": "pair/5/7",
+      "payloads": [
+        {
+          "inputResponses": [
+            {
+              "requestId": "approval",
+              "optionId": "approve"
+            }
+          ],
+          "context": [
+            "first"
+          ],
+          "outputSchema": {
+            "type": "string"
+          },
+          "messageConsumed": true,
+          "extra": "first"
+        },
+        {
+          "runtimeActionResults": [
+            {
+              "fixtureResult": "first"
+            }
+          ],
+          "extra": "last"
+        }
+      ],
+      "valid": true,
+      "output": {
+        "messageConsumed": true,
+        "extra": "last",
+        "runtimeActionResults": [
+          {
+            "fixtureResult": "first"
+          }
+        ],
+        "inputResponses": [
+          {
+            "requestId": "approval",
+            "optionId": "approve"
+          }
+        ],
+        "context": [
+          "first"
+        ],
+        "outputSchema": {
+          "type": "string"
+        }
+      }
+    },
+    {
+      "kind": "payloads",
+      "name": "single/6",
+      "payloads": [
+        {
+          "inputResponses": [
+            {
+              "requestId": "approval",
+              "optionId": "deny"
+            }
+          ],
+          "context": [
+            "last"
+          ],
+          "outputSchema": null,
+          "messageConsumed": false,
+          "extra": null
+        }
+      ],
+      "valid": true,
+      "output": {
+        "inputResponses": [
+          {
+            "requestId": "approval",
+            "optionId": "deny"
+          }
+        ],
+        "context": [
+          "last"
+        ],
+        "outputSchema": null,
+        "messageConsumed": false,
+        "extra": null
+      }
+    },
+    {
+      "kind": "payloads",
+      "name": "pair/6/0",
+      "payloads": [
+        {
+          "inputResponses": [
+            {
+              "requestId": "approval",
+              "optionId": "deny"
+            }
+          ],
+          "context": [
+            "last"
+          ],
+          "outputSchema": null,
+          "messageConsumed": false,
+          "extra": null
+        },
+        {}
+      ],
+      "valid": true,
+      "output": {
+        "messageConsumed": false,
+        "extra": null,
+        "inputResponses": [
+          {
+            "requestId": "approval",
+            "optionId": "deny"
+          }
+        ],
+        "context": [
+          "last"
+        ]
+      }
+    },
+    {
+      "kind": "payloads",
+      "name": "pair/6/1",
+      "payloads": [
+        {
+          "inputResponses": [
+            {
+              "requestId": "approval",
+              "optionId": "deny"
+            }
+          ],
+          "context": [
+            "last"
+          ],
+          "outputSchema": null,
+          "messageConsumed": false,
+          "extra": null
+        },
+        {
+          "message": "first"
+        }
+      ],
+      "valid": true,
+      "output": {
+        "messageConsumed": false,
+        "extra": null,
+        "inputResponses": [
+          {
+            "requestId": "approval",
+            "optionId": "deny"
+          }
+        ],
+        "message": "first",
+        "context": [
+          "last"
+        ]
+      }
+    },
+    {
+      "kind": "payloads",
+      "name": "pair/6/2",
+      "payloads": [
+        {
+          "inputResponses": [
+            {
+              "requestId": "approval",
+              "optionId": "deny"
+            }
+          ],
+          "context": [
+            "last"
+          ],
+          "outputSchema": null,
+          "messageConsumed": false,
+          "extra": null
+        },
+        {
+          "message": " second "
+        }
+      ],
+      "valid": true,
+      "output": {
+        "messageConsumed": false,
+        "extra": null,
+        "inputResponses": [
+          {
+            "requestId": "approval",
+            "optionId": "deny"
+          }
+        ],
+        "message": " second ",
+        "context": [
+          "last"
+        ]
+      }
+    },
+    {
+      "kind": "payloads",
+      "name": "pair/6/3",
+      "payloads": [
+        {
+          "inputResponses": [
+            {
+              "requestId": "approval",
+              "optionId": "deny"
+            }
+          ],
+          "context": [
+            "last"
+          ],
+          "outputSchema": null,
+          "messageConsumed": false,
+          "extra": null
+        },
+        {
+          "message": " ﻿ "
+        }
+      ],
+      "valid": true,
+      "output": {
+        "messageConsumed": false,
+        "extra": null,
+        "inputResponses": [
+          {
+            "requestId": "approval",
+            "optionId": "deny"
+          }
+        ],
+        "context": [
+          "last"
+        ]
+      }
+    },
+    {
+      "kind": "payloads",
+      "name": "pair/6/4",
+      "payloads": [
+        {
+          "inputResponses": [
+            {
+              "requestId": "approval",
+              "optionId": "deny"
+            }
+          ],
+          "context": [
+            "last"
+          ],
+          "outputSchema": null,
+          "messageConsumed": false,
+          "extra": null
+        },
+        {
+          "message": [
+            {
+              "type": "text",
+              "text": "file context"
+            },
+            {
+              "type": "file",
+              "data": "fixture-bytes"
+            }
+          ]
+        }
+      ],
+      "valid": true,
+      "output": {
+        "messageConsumed": false,
+        "extra": null,
+        "inputResponses": [
+          {
+            "requestId": "approval",
+            "optionId": "deny"
+          }
+        ],
+        "message": [
+          {
+            "type": "text",
+            "text": "file context"
+          },
+          {
+            "type": "file",
+            "data": "fixture-bytes"
+          }
+        ],
+        "context": [
+          "last"
+        ]
+      }
+    },
+    {
+      "kind": "payloads",
+      "name": "pair/6/5",
+      "payloads": [
+        {
+          "inputResponses": [
+            {
+              "requestId": "approval",
+              "optionId": "deny"
+            }
+          ],
+          "context": [
+            "last"
+          ],
+          "outputSchema": null,
+          "messageConsumed": false,
+          "extra": null
+        },
+        {
+          "inputResponses": [
+            {
+              "requestId": "approval",
+              "optionId": "approve"
+            }
+          ],
+          "context": [
+            "first"
+          ],
+          "outputSchema": {
+            "type": "string"
+          },
+          "messageConsumed": true,
+          "extra": "first"
+        }
+      ],
+      "valid": true,
+      "output": {
+        "messageConsumed": true,
+        "extra": "first",
+        "inputResponses": [
+          {
+            "requestId": "approval",
+            "optionId": "deny"
+          },
+          {
+            "requestId": "approval",
+            "optionId": "approve"
+          }
+        ],
+        "context": [
+          "last",
+          "first"
+        ],
+        "outputSchema": {
+          "type": "string"
+        }
+      }
+    },
+    {
+      "kind": "payloads",
+      "name": "pair/6/6",
+      "payloads": [
+        {
+          "inputResponses": [
+            {
+              "requestId": "approval",
+              "optionId": "deny"
+            }
+          ],
+          "context": [
+            "last"
+          ],
+          "outputSchema": null,
+          "messageConsumed": false,
+          "extra": null
+        },
+        {
+          "inputResponses": [
+            {
+              "requestId": "approval",
+              "optionId": "deny"
+            }
+          ],
+          "context": [
+            "last"
+          ],
+          "outputSchema": null,
+          "messageConsumed": false,
+          "extra": null
+        }
+      ],
+      "valid": true,
+      "output": {
+        "messageConsumed": false,
+        "extra": null,
+        "inputResponses": [
+          {
+            "requestId": "approval",
+            "optionId": "deny"
+          },
+          {
+            "requestId": "approval",
+            "optionId": "deny"
+          }
+        ],
+        "context": [
+          "last",
+          "last"
+        ]
+      }
+    },
+    {
+      "kind": "payloads",
+      "name": "pair/6/7",
+      "payloads": [
+        {
+          "inputResponses": [
+            {
+              "requestId": "approval",
+              "optionId": "deny"
+            }
+          ],
+          "context": [
+            "last"
+          ],
+          "outputSchema": null,
+          "messageConsumed": false,
+          "extra": null
+        },
+        {
+          "runtimeActionResults": [
+            {
+              "fixtureResult": "first"
+            }
+          ],
+          "extra": "last"
+        }
+      ],
+      "valid": true,
+      "output": {
+        "messageConsumed": false,
+        "extra": "last",
+        "runtimeActionResults": [
+          {
+            "fixtureResult": "first"
+          }
+        ],
+        "inputResponses": [
+          {
+            "requestId": "approval",
+            "optionId": "deny"
+          }
+        ],
+        "context": [
+          "last"
+        ]
+      }
+    },
+    {
+      "kind": "payloads",
+      "name": "single/7",
+      "payloads": [
+        {
+          "runtimeActionResults": [
+            {
+              "fixtureResult": "first"
+            }
+          ],
+          "extra": "last"
+        }
+      ],
+      "valid": true,
+      "output": {
+        "runtimeActionResults": [
+          {
+            "fixtureResult": "first"
+          }
+        ],
+        "extra": "last"
+      }
+    },
+    {
+      "kind": "payloads",
+      "name": "pair/7/0",
+      "payloads": [
+        {
+          "runtimeActionResults": [
+            {
+              "fixtureResult": "first"
+            }
+          ],
+          "extra": "last"
+        },
+        {}
+      ],
+      "valid": true,
+      "output": {
+        "runtimeActionResults": [
+          {
+            "fixtureResult": "first"
+          }
+        ],
+        "extra": "last"
+      }
+    },
+    {
+      "kind": "payloads",
+      "name": "pair/7/1",
+      "payloads": [
+        {
+          "runtimeActionResults": [
+            {
+              "fixtureResult": "first"
+            }
+          ],
+          "extra": "last"
+        },
+        {
+          "message": "first"
+        }
+      ],
+      "valid": true,
+      "output": {
+        "runtimeActionResults": [
+          {
+            "fixtureResult": "first"
+          }
+        ],
+        "extra": "last",
+        "message": "first"
+      }
+    },
+    {
+      "kind": "payloads",
+      "name": "pair/7/2",
+      "payloads": [
+        {
+          "runtimeActionResults": [
+            {
+              "fixtureResult": "first"
+            }
+          ],
+          "extra": "last"
+        },
+        {
+          "message": " second "
+        }
+      ],
+      "valid": true,
+      "output": {
+        "runtimeActionResults": [
+          {
+            "fixtureResult": "first"
+          }
+        ],
+        "extra": "last",
+        "message": " second "
+      }
+    },
+    {
+      "kind": "payloads",
+      "name": "pair/7/3",
+      "payloads": [
+        {
+          "runtimeActionResults": [
+            {
+              "fixtureResult": "first"
+            }
+          ],
+          "extra": "last"
+        },
+        {
+          "message": " ﻿ "
+        }
+      ],
+      "valid": true,
+      "output": {
+        "runtimeActionResults": [
+          {
+            "fixtureResult": "first"
+          }
+        ],
+        "extra": "last"
+      }
+    },
+    {
+      "kind": "payloads",
+      "name": "pair/7/4",
+      "payloads": [
+        {
+          "runtimeActionResults": [
+            {
+              "fixtureResult": "first"
+            }
+          ],
+          "extra": "last"
+        },
+        {
+          "message": [
+            {
+              "type": "text",
+              "text": "file context"
+            },
+            {
+              "type": "file",
+              "data": "fixture-bytes"
+            }
+          ]
+        }
+      ],
+      "valid": true,
+      "output": {
+        "runtimeActionResults": [
+          {
+            "fixtureResult": "first"
+          }
+        ],
+        "extra": "last",
+        "message": [
+          {
+            "type": "text",
+            "text": "file context"
+          },
+          {
+            "type": "file",
+            "data": "fixture-bytes"
+          }
+        ]
+      }
+    },
+    {
+      "kind": "payloads",
+      "name": "pair/7/5",
+      "payloads": [
+        {
+          "runtimeActionResults": [
+            {
+              "fixtureResult": "first"
+            }
+          ],
+          "extra": "last"
+        },
+        {
+          "inputResponses": [
+            {
+              "requestId": "approval",
+              "optionId": "approve"
+            }
+          ],
+          "context": [
+            "first"
+          ],
+          "outputSchema": {
+            "type": "string"
+          },
+          "messageConsumed": true,
+          "extra": "first"
+        }
+      ],
+      "valid": true,
+      "output": {
+        "runtimeActionResults": [
+          {
+            "fixtureResult": "first"
+          }
+        ],
+        "extra": "first",
+        "messageConsumed": true,
+        "inputResponses": [
+          {
+            "requestId": "approval",
+            "optionId": "approve"
+          }
+        ],
+        "context": [
+          "first"
+        ],
+        "outputSchema": {
+          "type": "string"
+        }
+      }
+    },
+    {
+      "kind": "payloads",
+      "name": "pair/7/6",
+      "payloads": [
+        {
+          "runtimeActionResults": [
+            {
+              "fixtureResult": "first"
+            }
+          ],
+          "extra": "last"
+        },
+        {
+          "inputResponses": [
+            {
+              "requestId": "approval",
+              "optionId": "deny"
+            }
+          ],
+          "context": [
+            "last"
+          ],
+          "outputSchema": null,
+          "messageConsumed": false,
+          "extra": null
+        }
+      ],
+      "valid": true,
+      "output": {
+        "runtimeActionResults": [
+          {
+            "fixtureResult": "first"
+          }
+        ],
+        "extra": null,
+        "messageConsumed": false,
+        "inputResponses": [
+          {
+            "requestId": "approval",
+            "optionId": "deny"
+          }
+        ],
+        "context": [
+          "last"
+        ]
+      }
+    },
+    {
+      "kind": "payloads",
+      "name": "pair/7/7",
+      "payloads": [
+        {
+          "runtimeActionResults": [
+            {
+              "fixtureResult": "first"
+            }
+          ],
+          "extra": "last"
+        },
+        {
+          "runtimeActionResults": [
+            {
+              "fixtureResult": "first"
+            }
+          ],
+          "extra": "last"
+        }
+      ],
+      "valid": true,
+      "output": {
+        "runtimeActionResults": [
+          {
+            "fixtureResult": "first"
+          }
+        ],
+        "extra": "last"
+      }
+    },
+    {
+      "kind": "resolved-payloads",
+      "name": "approve/deny",
+      "payloads": [
+        {
+          "inputResponses": [
+            {
+              "requestId": "approval",
+              "optionId": "approve"
+            }
+          ]
+        },
+        {
+          "inputResponses": [
+            {
+              "requestId": "approval",
+              "optionId": "deny"
+            }
+          ]
+        }
+      ],
+      "batch": {
+        "requests": [
+          {
+            "action": {
+              "callId": "write",
+              "input": {
+                "fixture": true
+              },
+              "kind": "tool-call",
+              "toolName": "update_team"
+            },
+            "allowFreeform": false,
+            "display": "confirmation",
+            "kind": "tool-approval",
+            "options": [
+              {
+                "id": "approve",
+                "label": "Yes"
+              },
+              {
+                "id": "deny",
+                "label": "No"
+              }
+            ],
+            "prompt": "Approve tool call: update_team",
+            "requestId": "approval"
+          }
+        ],
+        "responseMessages": [],
+        "event": {
+          "turnId": "fixture-turn",
+          "sequence": 1,
+          "stepIndex": 0
+        }
+      },
+      "valid": true,
+      "output": {
+        "merged": {
+          "inputResponses": [
+            {
+              "requestId": "approval",
+              "optionId": "approve"
+            },
+            {
+              "requestId": "approval",
+              "optionId": "deny"
+            }
+          ]
+        },
+        "outcome": "resolved",
+        "messages": [
+          {
+            "content": [
+              {
+                "approvalId": "approval",
+                "approved": false,
+                "reason": "Tool execution was denied.",
+                "type": "tool-approval-response"
+              },
+              {
+                "output": {
+                  "type": "execution-denied",
+                  "reason": "Tool execution was denied."
+                },
+                "toolCallId": "write",
+                "toolName": "update_team",
+                "type": "tool-result"
+              }
+            ],
+            "role": "tool"
+          }
+        ]
+      }
+    },
+    {
+      "kind": "resolved-payloads",
+      "name": "deny/approve",
+      "payloads": [
+        {
+          "inputResponses": [
+            {
+              "requestId": "approval",
+              "optionId": "deny"
+            }
+          ]
+        },
+        {
+          "inputResponses": [
+            {
+              "requestId": "approval",
+              "optionId": "approve"
+            }
+          ]
+        }
+      ],
+      "batch": {
+        "requests": [
+          {
+            "action": {
+              "callId": "write",
+              "input": {
+                "fixture": true
+              },
+              "kind": "tool-call",
+              "toolName": "update_team"
+            },
+            "allowFreeform": false,
+            "display": "confirmation",
+            "kind": "tool-approval",
+            "options": [
+              {
+                "id": "approve",
+                "label": "Yes"
+              },
+              {
+                "id": "deny",
+                "label": "No"
+              }
+            ],
+            "prompt": "Approve tool call: update_team",
+            "requestId": "approval"
+          }
+        ],
+        "responseMessages": [],
+        "event": {
+          "turnId": "fixture-turn",
+          "sequence": 1,
+          "stepIndex": 0
+        }
+      },
+      "valid": true,
+      "output": {
+        "merged": {
+          "inputResponses": [
+            {
+              "requestId": "approval",
+              "optionId": "deny"
+            },
+            {
+              "requestId": "approval",
+              "optionId": "approve"
+            }
+          ]
+        },
+        "outcome": "resolved",
+        "messages": [
+          {
+            "content": [
+              {
+                "approvalId": "approval",
+                "approved": true,
+                "type": "tool-approval-response"
+              }
+            ],
+            "role": "tool"
+          }
+        ]
+      }
+    },
+    {
+      "kind": "resolved-payloads",
+      "name": "approve/invalid",
+      "payloads": [
+        {
+          "inputResponses": [
+            {
+              "requestId": "approval",
+              "optionId": "approve"
+            }
+          ]
+        },
+        {
+          "inputResponses": [
+            {
+              "requestId": "approval",
+              "optionId": "invalid"
+            }
+          ]
+        }
+      ],
+      "batch": {
+        "requests": [
+          {
+            "action": {
+              "callId": "write",
+              "input": {
+                "fixture": true
+              },
+              "kind": "tool-call",
+              "toolName": "update_team"
+            },
+            "allowFreeform": false,
+            "display": "confirmation",
+            "kind": "tool-approval",
+            "options": [
+              {
+                "id": "approve",
+                "label": "Yes"
+              },
+              {
+                "id": "deny",
+                "label": "No"
+              }
+            ],
+            "prompt": "Approve tool call: update_team",
+            "requestId": "approval"
+          }
+        ],
+        "responseMessages": [],
+        "event": {
+          "turnId": "fixture-turn",
+          "sequence": 1,
+          "stepIndex": 0
+        }
+      },
+      "valid": true,
+      "output": {
+        "merged": {
+          "inputResponses": [
+            {
+              "requestId": "approval",
+              "optionId": "approve"
+            },
+            {
+              "requestId": "approval",
+              "optionId": "invalid"
+            }
+          ]
+        },
+        "outcome": "resolved",
+        "messages": [
+          {
+            "content": [
+              {
+                "approvalId": "approval",
+                "approved": false,
+                "reason": "Invalid approval response.",
+                "type": "tool-approval-response"
+              },
+              {
+                "output": {
+                  "type": "execution-denied",
+                  "reason": "Invalid approval response."
+                },
+                "toolCallId": "write",
+                "toolName": "update_team",
+                "type": "tool-result"
+              }
+            ],
+            "role": "tool"
+          }
+        ]
+      }
+    },
+    {
+      "kind": "resolved-payloads",
+      "name": "invalid/approve",
+      "payloads": [
+        {
+          "inputResponses": [
+            {
+              "requestId": "approval",
+              "optionId": "invalid"
+            }
+          ]
+        },
+        {
+          "inputResponses": [
+            {
+              "requestId": "approval",
+              "optionId": "approve"
+            }
+          ]
+        }
+      ],
+      "batch": {
+        "requests": [
+          {
+            "action": {
+              "callId": "write",
+              "input": {
+                "fixture": true
+              },
+              "kind": "tool-call",
+              "toolName": "update_team"
+            },
+            "allowFreeform": false,
+            "display": "confirmation",
+            "kind": "tool-approval",
+            "options": [
+              {
+                "id": "approve",
+                "label": "Yes"
+              },
+              {
+                "id": "deny",
+                "label": "No"
+              }
+            ],
+            "prompt": "Approve tool call: update_team",
+            "requestId": "approval"
+          }
+        ],
+        "responseMessages": [],
+        "event": {
+          "turnId": "fixture-turn",
+          "sequence": 1,
+          "stepIndex": 0
+        }
+      },
+      "valid": true,
+      "output": {
+        "merged": {
+          "inputResponses": [
+            {
+              "requestId": "approval",
+              "optionId": "invalid"
+            },
+            {
+              "requestId": "approval",
+              "optionId": "approve"
+            }
+          ]
+        },
+        "outcome": "resolved",
+        "messages": [
+          {
+            "content": [
+              {
+                "approvalId": "approval",
+                "approved": true,
+                "type": "tool-approval-response"
+              }
+            ],
+            "role": "tool"
+          }
+        ]
+      }
+    }
+  ]
+}

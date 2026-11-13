@@ -20,7 +20,7 @@ use serde_json::{Value, json};
 use sqlx::postgres::PgPoolOptions;
 use std::sync::{
     Arc, Mutex,
-    atomic::{AtomicUsize, Ordering},
+    atomic::{AtomicBool, AtomicUsize, Ordering},
 };
 use tokio::sync::Notify;
 use url::Url;
@@ -44,9 +44,13 @@ pub struct Script {
     pub output_limits: Mutex<Vec<u32>>,
     pub question_results: Mutex<Vec<Value>>,
     pub model_runs: Mutex<Vec<(String, String)>>,
+    pub model_prompts: Mutex<Vec<(String, Vec<Value>)>>,
     pub callback_runs: Mutex<Vec<String>>,
     grant_owner: Mutex<Option<String>>,
     pub began: Notify,
+    pub pause_next_model: AtomicBool,
+    pub model_paused: Notify,
+    pub release_model: Notify,
 }
 struct Adapter(Arc<Script>);
 #[async_trait]
@@ -64,6 +68,11 @@ impl Model for Adapter {
             .lock()
             .unwrap()
             .push((channel.run_id().into(), channel.provider().into()));
+        self.0
+            .model_prompts
+            .lock()
+            .unwrap()
+            .push((channel.run_id().into(), turn.prompt.to_vec()));
         if matches!(self.0.mode, Mode::MixedRequired) {
             self.0
                 .grant_owner
@@ -77,6 +86,10 @@ impl Model for Adapter {
             .unwrap()
             .push(turn.max_output_tokens.unwrap());
         self.0.began.notify_one();
+        if self.0.pause_next_model.swap(false, Ordering::SeqCst) {
+            self.0.model_paused.notify_one();
+            self.0.release_model.notified().await;
+        }
         if matches!(self.0.mode, Mode::Stall) {
             std::future::pending::<()>().await;
         }
@@ -239,9 +252,13 @@ impl Fixture {
             output_limits: Mutex::new(vec![]),
             question_results: Mutex::new(vec![]),
             model_runs: Mutex::new(vec![]),
+            model_prompts: Mutex::new(vec![]),
             callback_runs: Mutex::new(vec![]),
             grant_owner: Mutex::new(None),
             began: Notify::new(),
+            pause_next_model: AtomicBool::new(false),
+            model_paused: Notify::new(),
+            release_model: Notify::new(),
         });
         let host = Host::new(
             store.clone(),

@@ -840,3 +840,134 @@ async fn repeated_model_call_ids_keep_distinct_historical_approval_metadata_out_
     }
     assert!(effects.requests.lock().unwrap().is_empty());
 }
+
+#[tokio::test]
+async fn cancelled_calling_and_queued_tools_become_history_without_replaying_committed_effects() {
+    let write = |id: &str| json!({"type":"tool-call","toolCallId":id,"toolName":"update_team","input":{"slug":"forge","settings":{"name":id}}});
+    let (a,parked,_,_,_,_)=parked(vec![write("ambiguous-write"),write("unstarted-write"),json!({"type":"tool-call","toolCallId":"completed-read","toolName":"get_team","input":{"slug":"forge"}})]).await;
+    let mut saved = parked.snapshot();
+    saved["phase"] = json!("tools");
+    saved["next_call"] = json!(0);
+    saved["pending_input"]["batch"] = Value::Null;
+    for (index, phase) in [(0, "calling"), (1, "queued")] {
+        saved["calls"][index]["phase"] = json!(phase);
+        saved["calls"][index]["decision"] = json!("approved");
+        let id = saved["calls"][index]["request_id"]
+            .as_str()
+            .unwrap()
+            .to_owned();
+        saved["decisions"][&id] = json!("approved");
+    }
+    saved["pending_input"]["deferredInput"] = json!({"message":"Keep this queued message"});
+    let active = State::restore(saved, &a).unwrap();
+    let settled = active.settle_cancelled_inputs(&[]).unwrap();
+    assert_eq!(settled.session_usage(), active.session_usage());
+    assert_eq!(settled.phase(), Phase::Ready);
+    let parts = outputs(&settled);
+    assert!(parts.iter().any(|part| {
+        part["toolCallId"] == "ambiguous-write"
+            && part["output"]["reason"]
+                .as_str()
+                .unwrap()
+                .contains("unknown")
+    }));
+    assert!(
+        parts
+            .iter()
+            .any(|part| part["toolCallId"] == "unstarted-write"
+                && part["output"]["type"] == "execution-denied")
+    );
+    assert_eq!(
+        parts
+            .iter()
+            .find(|part| part["toolCallId"] == "completed-read")
+            .unwrap()["output"],
+        active.snapshot()["calls"][2]["output"]
+    );
+    let c = successor("owner", "workspace", "anthropic");
+    let original = initial(&c);
+    let old = parked.pending_requests()[0]["requestId"].clone();
+    let (mut resumed, _) = settled
+        .canonical_inputs(
+            &c,
+            &original,
+            &[json!({"requestId":old,"optionId":"approve"})],
+        )
+        .unwrap();
+    assert!(resumed.history().iter().any(|message| {
+        message["role"] == "user"
+            && message["content"]
+                .as_str()
+                .is_some_and(|text| text.contains("Keep this queued message"))
+    }));
+    let journal = Arc::new(Memory::new(resumed.clone()));
+    let model = Arc::new(Scripted::new(vec![]));
+    let (engine, effects) = setup(model, journal.clone(), None);
+    assert_eq!(
+        engine
+            .drive(
+                &c,
+                &mut resumed,
+                journal.as_ref(),
+                &Cancellation::default(),
+                deadline()
+            )
+            .await
+            .unwrap(),
+        Phase::Complete
+    );
+    assert!(effects.requests.lock().unwrap().is_empty());
+}
+
+#[tokio::test]
+async fn cancelled_projection_retains_proven_earlier_input_and_questions_but_discards_own_write() {
+    let write = |id: &str| json!({"type":"tool-call","toolCallId":id,"toolName":"update_team","input":{"slug":"forge","settings":{"name":id}}});
+    let (a, original, _, _, _, _) = parked(vec![
+        write("earlier-a"),
+        write("cancelled-b"),
+        question("ordinary-question", json!({"prompt":"Anything else?"})),
+    ])
+    .await;
+    let requests = original.pending_requests();
+    let retained = requests[0]["requestId"].as_str().unwrap().to_owned();
+    let mut saved = original.snapshot();
+    let b = successor("owner", "workspace", "anthropic");
+    saved["binding"]["run"] = json!(b.run_id());
+    saved["binding"]["provider"] = json!(b.provider());
+    saved["issued_requests"]
+        .as_object_mut()
+        .unwrap()
+        .remove(&retained);
+    saved["pending_input"]["deferredInput"] = json!({"message":"Deferred message"});
+    let owner = State::restore(saved, &b).unwrap();
+    let settled = owner
+        .settle_cancelled_inputs(std::slice::from_ref(&retained))
+        .unwrap();
+    assert_eq!(settled.pending_requests().len(), 2);
+    assert_eq!(settled.pending_questions().len(), 1);
+    assert_eq!(
+        settled.snapshot()["calls"][1]["output"]["type"],
+        "execution-denied"
+    );
+    assert_eq!(
+        settled.snapshot()["pending_input"]["deferredInput"]["message"],
+        "Deferred message"
+    );
+    let (resumed, _) = settled
+        .canonical_inputs(
+            &a,
+            &original,
+            &[json!({"requestId":retained,"optionId":"deny"})],
+        )
+        .unwrap();
+    assert_eq!(resumed.session_usage(), owner.session_usage());
+    assert!(resumed.pending_requests().is_empty());
+    assert_eq!(
+        resumed.snapshot()["calls"][1]["output"]["type"],
+        "execution-denied"
+    );
+    assert_eq!(
+        resumed.snapshot()["calls"][2]["output"]["value"]["status"],
+        "ignored"
+    );
+}

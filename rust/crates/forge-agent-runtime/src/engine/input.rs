@@ -461,15 +461,132 @@ impl State {
         {
             return Err(STALE);
         }
+        self.canonical_inputs(channel, original_run, &[json!({"requestId":request,"optionId":if decision == Decision::Approved {"approve"} else {"deny"}})])
+    }
+
+    /// The journal proves each response's original issuance separately. The last
+    /// delivery supplies authority; the first delivery remains only a receipt
+    /// anchor. Source decisions here never manufacture application grants.
+    pub fn canonical_inputs(
+        &self,
+        channel: &Channel,
+        original_run: &State,
+        responses: &[Value],
+    ) -> Result<(State, Vec<Value>)> {
+        self.canonical_inputs_with_limits(channel, original_run, responses, &[])
+    }
+
+    pub(crate) fn canonical_inputs_with_limits(
+        &self,
+        channel: &Channel,
+        original_run: &State,
+        responses: &[Value],
+        earlier_limits: &[String],
+    ) -> Result<(State, Vec<Value>)> {
+        if responses.is_empty() || responses.len() > 128 {
+            return Err(STALE);
+        }
+        typed_responses(responses)?;
         let mut next = self.rebind(channel, Some(original_run))?;
-        next.decisions.insert(request.to_owned(), decision);
-        let (resolved, mut events) = next.deliver_input(&json!({"inputResponses":[{"requestId":request,"optionId":if decision == Decision::Approved {"approve"} else {"deny"}}]}))?;
+        for response in responses {
+            let request = response["requestId"].as_str().ok_or(STALE)?;
+            uuid::Uuid::parse_str(request).map_err(|_| STALE)?;
+            let decision = match response["optionId"].as_str() {
+                Some("approve") => Decision::Approved,
+                Some("deny") => Decision::Denied,
+                _ => return Err(STALE),
+            };
+            if original_run.issued_request(request).is_some()
+                && original_run
+                    .decision(request)
+                    .is_some_and(|old| old != decision)
+            {
+                return Err(STALE);
+            }
+            next.decisions.insert(request.to_owned(), decision);
+        }
+        let payloads = responses
+            .iter()
+            .map(|response| json!({"inputResponses":[response]}))
+            .collect::<Vec<_>>();
+        let input =
+            forge_core::agents::delivery::coalesce_payloads(&payloads).map_err(|_| INVALID)?;
+        let (resolved, mut events) = next.deliver_input_with_limits(&input, earlier_limits)?;
         if resolved {
             events.insert(0, event(&next, "turn.started", json!({})));
         }
         next.validate(channel)?;
         bounded(&next)?;
         Ok((next, events))
+    }
+
+    /// Native tools checkpoint earlier than the source's adopted step. Preserve
+    /// committed results and usage, but close every unfinished cancelled call
+    /// rather than replaying a queued call or an ambiguous in-flight effect.
+    /// Only ordinary questions and journal-proven earlier required requests may
+    /// survive; the cancelled run's canonical grants cannot be revived.
+    pub fn settle_cancelled_inputs(&self, preserved_required: &[String]) -> Result<State> {
+        self.validate_structure()?;
+        let allowed: HashSet<_> = preserved_required.iter().map(String::as_str).collect();
+        let mut next = self.clone();
+        next.compaction.active = None;
+        next.pending_input = pending::clear_session_limit_prompt(&next.pending_input);
+        next.budget.pending = None;
+        if let Some(batch) = &mut next.pending_input.batch {
+            batch.requests.retain(|request| {
+                request["kind"] == "question"
+                    || request["kind"] == "tool-approval"
+                        && request["requestId"]
+                            .as_str()
+                            .is_some_and(|id| allowed.contains(id))
+            });
+            if batch.requests.is_empty() {
+                next.pending_input.batch = None;
+            }
+        }
+        let retained: HashSet<String> = next
+            .pending_requests()
+            .iter()
+            .filter_map(|request| request["requestId"].as_str().map(str::to_owned))
+            .collect();
+        for call in &mut next.calls {
+            if call.phase == CallPhase::Complete
+                || call.phase == CallPhase::Waiting
+                    && call
+                        .request_id
+                        .as_ref()
+                        .is_some_and(|id| retained.contains(id))
+            {
+                continue;
+            }
+            let uncertain = call.phase == CallPhase::Calling;
+            call.phase = CallPhase::Complete;
+            call.output = Some(json!({"type":"execution-denied","reason":if uncertain {
+                "The previous run was cancelled while this tool was in flight; its outcome is unknown and it will not be retried."
+            } else {
+                "The previous run was cancelled before this tool completed."
+            }}));
+            if call.name == "ask_question" && call.request_id.is_some() {
+                let output = contract::question_output(None);
+                call.output = Some(json!({"type":"json","value":output}));
+                next.question_answers.insert(call.id.clone(), output);
+            }
+        }
+        next.questions = next
+            .pending_requests()
+            .into_iter()
+            .filter(|request| request["kind"] == "question")
+            .collect();
+        next.next_call = 0;
+        next.phase = if next.pending_input.batch.is_some() {
+            Phase::Waiting
+        } else {
+            Phase::Ready
+        };
+        next.finish_answered_batch();
+        next.validate_structure()?;
+        bounded(&next)?;
+        Ok(next)
     }
 
     pub(crate) fn resolve_approval(
@@ -536,6 +653,14 @@ impl State {
     }
 
     fn deliver_input(&mut self, input: &Value) -> Result<(bool, Vec<Value>)> {
+        self.deliver_input_with_limits(input, &[])
+    }
+
+    fn deliver_input_with_limits(
+        &mut self,
+        input: &Value,
+        earlier_limits: &[String],
+    ) -> Result<(bool, Vec<Value>)> {
         let consumed =
             pending::consume_deferred(&self.pending_input, Some(input)).map_err(|_| INVALID)?;
         let mut source = consumed.state;
@@ -555,10 +680,11 @@ impl State {
             responses.retain(|response| {
                 let id = response["requestId"].as_str().unwrap_or_default();
                 pending_ids.iter().any(|pending| pending == id)
-                    || self
-                        .issued_requests
-                        .get(id)
-                        .is_none_or(|request| request["kind"] != "session-limit")
+                    || !earlier_limits.iter().any(|limit| limit == id)
+                        && self
+                            .issued_requests
+                            .get(id)
+                            .is_none_or(|request| request["kind"] != "session-limit")
             });
             if responses.is_empty() {
                 step.as_mut()

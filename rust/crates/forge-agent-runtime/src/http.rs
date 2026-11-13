@@ -15,7 +15,10 @@ use axum::{
     routing::{get, post},
 };
 use chrono::{DateTime, Utc};
-use forge_core::canonical::javascript_stringify;
+use forge_core::{
+    agents::runtime::{ConversationFence, DeliveryReceipt, DrainBoundary, QueuedInput},
+    canonical::javascript_stringify,
+};
 use serde::Deserialize;
 use serde_json::{Value, json};
 use std::{collections::VecDeque, convert::Infallible, sync::Arc, time::Duration};
@@ -117,6 +120,19 @@ pub fn router(host: Host, secret: String) -> crate::Result<Router> {
         .route("/native/v1/runs/{run}", post(admit).get(status))
         .route("/native/v1/conversations/{id}", get(conversation))
         .route("/native/v1/runs/{run}/resume", post(resume))
+        .route("/native/v1/runs/{run}/inputs", post(enqueue_input))
+        .route(
+            "/native/v1/conversations/{id}/drained",
+            post(acknowledge_drained),
+        )
+        .route(
+            "/native/v1/conversations/{id}/handoffs/prepare",
+            post(prepare_handoff),
+        )
+        .route(
+            "/native/v1/runs/{run}/handoffs/{handoff}/activate",
+            post(activate_handoff),
+        )
         .route("/native/v1/runs/{run}/recover", post(recover))
         .route("/native/v1/runs/{run}/cancel", post(cancel))
         .route("/native/v1/runs/{run}/events", get(events))
@@ -169,11 +185,13 @@ fn public(session: &Session) -> Value {
             session.state.phase(),
             Phase::Complete | Phase::Cancelled | Phase::Failed
         );
-    json!({"phase":session.state.phase(),"cancelled":cancelled,"nextIndex":session.next_index,"deadline":session.deadline.timestamp_millis(),"pendingRequestId":session.pending_requests.first().and_then(|request|request.get("requestId")),"pendingRequests":session.pending_requests,"continuedByRunId":session.continued_by,"workerActive":session.worker_active,"deliveryComplete":delivery_complete,"conversation":session.conversation})
+    json!({"phase":session.state.phase(),"cancelled":cancelled,"nextIndex":session.next_index,"deadline":session.deadline.timestamp_millis(),"pendingRequestId":session.pending_requests.first().and_then(|request|request.get("requestId")),"pendingRequests":session.pending_requests,"continuedByRunId":session.continued_by,"workerActive":session.worker_active,"deliveryComplete":delivery_complete,"conversation":session.conversation,"boundary":session.boundary})
 }
 #[derive(Deserialize)]
 #[serde(rename_all = "camelCase", deny_unknown_fields)]
 struct Admission {
+    #[serde(default)]
+    managed: bool,
     message: String,
     deadline: i64,
     #[serde(default)]
@@ -200,6 +218,7 @@ impl Admission {
             || self.attachments.len() > 20
             || (self.previous_run_id.is_some() && self.conversation_id.is_none())
             || (self.expected_generation.is_some() && self.conversation_id.is_none())
+            || (self.managed && self.conversation_id.is_none())
             || self
                 .expected_generation
                 .is_some_and(|value| value > 9_007_199_254_740_991)
@@ -244,18 +263,33 @@ async fn admit(
     }
     let admission = async {
         if let Some(conversation) = input.conversation_id {
-            service
-                .host
-                .store()
-                .admit_at(
-                    &channel,
-                    conversation,
-                    input.previous_run_id,
-                    message,
-                    deadline,
-                    input.expected_generation,
-                )
-                .await
+            if input.managed {
+                service
+                    .host
+                    .store()
+                    .admit_managed_at(
+                        &channel,
+                        conversation,
+                        input.previous_run_id,
+                        message,
+                        deadline,
+                        input.expected_generation,
+                    )
+                    .await
+            } else {
+                service
+                    .host
+                    .store()
+                    .admit_at(
+                        &channel,
+                        conversation,
+                        input.previous_run_id,
+                        message,
+                        deadline,
+                        input.expected_generation,
+                    )
+                    .await
+            }
         } else {
             let state = EngineState::new(&channel, vec![message])?;
             service
@@ -269,7 +303,10 @@ async fn admit(
         .await
         .map_err(|_| UNAVAILABLE)?
         .map_err(persisted_input_error)?;
-    if !session.cancelled
+    let current_delivery =
+        !input.managed || session.current_delivery && session.input_generation == 0;
+    if current_delivery
+        && !session.cancelled
         && !session.delivery_only
         && session.continued_by.is_none()
         && !matches!(
@@ -282,11 +319,18 @@ async fn admit(
         }
         service.host.kick(channel).map_err(|_| UNAVAILABLE)?;
     }
-    Ok((
-        StatusCode::ACCEPTED,
-        Json(json!({"ok":true,"runId":run,"status":public(&session)})),
-    )
-        .into_response())
+    let mut response = json!({"ok":true,"runId":run,"status":public(&session)});
+    if input.managed {
+        response["delivery"] = json!(DeliveryReceipt {
+            run_id: Uuid::parse_str(&run).map_err(|_| BAD)?,
+            input_generation: 0,
+            stream_start_index: 0,
+            current_delivery,
+            replayed: session.admission_replayed,
+            handoff_id: None,
+        });
+    }
+    Ok((StatusCode::ACCEPTED, Json(response)).into_response())
 }
 async fn status(
     State(service): State<Service>,
@@ -396,9 +440,40 @@ async fn recover(
     State(service): State<Service>,
     Path(run): Path<String>,
     headers: HeaderMap,
+    body: Bytes,
 ) -> HttpResult<Response> {
     let channel = service.channel(&headers, &run)?;
+    let input: Recovery = if body.is_empty() {
+        Recovery::default()
+    } else {
+        parse(&headers, &body)?
+    };
+    if input.managed != input.input_generation.is_some()
+        || input
+            .input_generation
+            .is_some_and(|value| value > 9_007_199_254_740_991)
+    {
+        return Err(BAD);
+    }
     let session = service.load(&channel).await?;
+    if session.managed != input.managed {
+        return Err(CONFLICT);
+    }
+    if input.managed {
+        if !session.current_delivery || input.input_generation != Some(session.input_generation) {
+            return Err(CONFLICT);
+        }
+        if needs_worker(&session) {
+            if session.deadline <= Utc::now() {
+                return Err(CONFLICT);
+            }
+            service.host.kick(channel).map_err(|_| UNAVAILABLE)?;
+        }
+        return Ok((StatusCode::ACCEPTED, Json(json!({"ok":true,"runId":run,"delivery":DeliveryReceipt {
+            run_id: Uuid::parse_str(&run).map_err(|_| BAD)?, input_generation:session.input_generation,
+            stream_start_index:0,current_delivery:true,replayed:true,handoff_id:None,
+        },"status":public(&session)}))).into_response());
+    }
     if session.cancelled
         || session.continued_by.is_some()
         || (session.delivery_only
@@ -423,6 +498,155 @@ async fn recover(
     )
         .into_response())
 }
+#[derive(Default, Deserialize)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
+struct Recovery {
+    #[serde(default)]
+    managed: bool,
+    #[serde(default)]
+    input_generation: Option<u64>,
+}
+fn needs_worker(session: &Session) -> bool {
+    !session.cancelled
+        && !session.delivery_only
+        && session.continued_by.is_none()
+        && !matches!(
+            session.state.phase(),
+            Phase::Waiting | Phase::Complete | Phase::Cancelled | Phase::Failed
+        )
+}
+fn valid_fence(fence: &ConversationFence) -> HttpResult<()> {
+    if fence.generation > 9_007_199_254_740_991 {
+        Err(BAD)
+    } else {
+        Ok(())
+    }
+}
+fn valid_boundary(boundary: &DrainBoundary) -> HttpResult<()> {
+    valid_fence(&boundary.conversation)?;
+    for snapshot in [&boundary.delivery, &boundary.execution] {
+        if [
+            snapshot.input_generation,
+            snapshot.state_revision,
+            snapshot.next_index,
+        ]
+        .iter()
+        .any(|value| *value > 9_007_199_254_740_991)
+        {
+            return Err(BAD);
+        }
+    }
+    Ok(())
+}
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct BoundaryInput {
+    boundary: DrainBoundary,
+}
+#[derive(Deserialize)]
+#[serde(deny_unknown_fields)]
+struct PrepareInput {
+    fence: ConversationFence,
+}
+async fn enqueue_input(
+    State(service): State<Service>,
+    Path(run): Path<String>,
+    headers: HeaderMap,
+    body: Bytes,
+) -> HttpResult<Response> {
+    let channel = service.channel(&headers, &run)?;
+    let input: QueuedInput = parse(&headers, &body)?;
+    let receipt = timeout(
+        Duration::from_secs(5),
+        service.host.store().enqueue_input(&channel, &input),
+    )
+    .await
+    .map_err(|_| UNAVAILABLE)?
+    .map_err(persisted_input_error)?;
+    Ok((
+        StatusCode::ACCEPTED,
+        Json(json!({"ok":true,"runId":run,"intent":receipt})),
+    )
+        .into_response())
+}
+async fn acknowledge_drained(
+    State(service): State<Service>,
+    Path(id): Path<Uuid>,
+    headers: HeaderMap,
+    body: Bytes,
+) -> HttpResult<Json<Value>> {
+    let channel = service.authenticated(&headers)?;
+    let input: BoundaryInput = parse(&headers, &body)?;
+    valid_boundary(&input.boundary)?;
+    if input.boundary.conversation.conversation_id != id {
+        return Err(BAD);
+    }
+    timeout(
+        Duration::from_secs(5),
+        service
+            .host
+            .store()
+            .acknowledge_drained(&channel, &input.boundary),
+    )
+    .await
+    .map_err(|_| UNAVAILABLE)?
+    .map_err(persisted_input_error)?;
+    Ok(Json(json!({"ok":true,"runId":channel.run_id()})))
+}
+async fn prepare_handoff(
+    State(service): State<Service>,
+    Path(id): Path<Uuid>,
+    headers: HeaderMap,
+    body: Bytes,
+) -> HttpResult<Json<Value>> {
+    let channel = service.authenticated(&headers)?;
+    let input: PrepareInput = parse(&headers, &body)?;
+    valid_fence(&input.fence)?;
+    if input.fence.conversation_id != id {
+        return Err(BAD);
+    }
+    let preparation = timeout(
+        Duration::from_secs(5),
+        service.host.store().prepare_handoff(&channel, &input.fence),
+    )
+    .await
+    .map_err(|_| UNAVAILABLE)?
+    .map_err(persisted_input_error)?;
+    Ok(Json(
+        json!({"ok":true,"runId":channel.run_id(),"preparation":preparation}),
+    ))
+}
+async fn activate_handoff(
+    State(service): State<Service>,
+    Path((run, handoff)): Path<(String, Uuid)>,
+    headers: HeaderMap,
+    body: Bytes,
+) -> HttpResult<Response> {
+    let channel = service.channel(&headers, &run)?;
+    let input: BoundaryInput = parse(&headers, &body)?;
+    valid_boundary(&input.boundary)?;
+    let mut receipt = timeout(
+        Duration::from_secs(5),
+        service
+            .host
+            .store()
+            .activate_handoff(&channel, handoff, &input.boundary),
+    )
+    .await
+    .map_err(|_| UNAVAILABLE)?
+    .map_err(persisted_input_error)?;
+    let session = service.load(&channel).await.map_err(|_| UNAVAILABLE)?;
+    receipt.current_delivery &=
+        session.current_delivery && receipt.input_generation == session.input_generation;
+    if receipt.current_delivery && needs_worker(&session) {
+        service.host.kick(channel).map_err(|_| UNAVAILABLE)?;
+    }
+    Ok((
+        StatusCode::ACCEPTED,
+        Json(json!({"ok":true,"runId":run,"delivery":receipt,"status":public(&session)})),
+    )
+        .into_response())
+}
 async fn cancel(
     State(service): State<Service>,
     Path(run): Path<String>,
@@ -440,22 +664,36 @@ async fn cancel(
     Ok(Json(json!({"ok":true,"runId":run})))
 }
 #[derive(Deserialize)]
-#[serde(deny_unknown_fields)]
+#[serde(rename_all = "camelCase", deny_unknown_fields)]
 struct Page {
     #[serde(default)]
     after: u64,
     #[serde(default = "page_size")]
     limit: usize,
+    #[serde(default)]
+    input_generation: Option<u64>,
 }
 fn page_size() -> usize {
     32
 }
 impl Page {
     fn validate(&self) -> HttpResult<()> {
-        if self.after > i64::MAX as u64 || !(1..=64).contains(&self.limit) {
+        if self.after > 9_007_199_254_740_991
+            || !(1..=64).contains(&self.limit)
+            || self
+                .input_generation
+                .is_some_and(|value| value > 9_007_199_254_740_991)
+        {
             Err(BAD)
         } else {
             Ok(())
+        }
+    }
+    fn matches(&self, session: &Session) -> bool {
+        if session.managed {
+            session.current_delivery && self.input_generation == Some(session.input_generation)
+        } else {
+            self.input_generation.is_none()
         }
     }
 }
@@ -468,6 +706,9 @@ async fn events(
     let channel = service.channel(&headers, &run)?;
     page.validate()?;
     let session = service.load(&channel).await?;
+    if !page.matches(&session) {
+        return Err(CONFLICT);
+    }
     let events = timeout(
         Duration::from_secs(5),
         service
@@ -478,6 +719,10 @@ async fn events(
     .await
     .map_err(|_| UNAVAILABLE)?
     .map_err(|_| MISSING)?;
+    let events = events
+        .into_iter()
+        .filter(|event| event.index < session.next_index)
+        .collect::<Vec<_>>();
     let next = events.last().map_or(page.after, |e| e.index + 1);
     Ok(Json(
         json!({"ok":true,"events":events.into_iter().map(|e|json!({"index":e.index,"event":e.value})).collect::<Vec<_>>(),"nextIndex":next,"status":public(&session)}),
@@ -488,6 +733,7 @@ struct Reader {
     channel: Channel,
     after: u64,
     limit: usize,
+    input_generation: Option<u64>,
     pending: VecDeque<Value>,
     done: bool,
     _permit: tokio::sync::OwnedSemaphorePermit,
@@ -531,7 +777,17 @@ impl Reader {
                     json!({"error":{"code":"RUNTIME_UNAVAILABLE","message":UNAVAILABLE.1}}),
                 );
             };
-            for event in events {
+            if session.managed
+                && (!session.current_delivery
+                    || self.input_generation != Some(session.input_generation))
+            {
+                self.done = true;
+                return Some(json!({"error":{"code":"DELIVERY_SUPERSEDED","message":CONFLICT.1}}));
+            }
+            for event in events
+                .into_iter()
+                .filter(|event| event.index < session.next_index)
+            {
                 self.after = event.index + 1;
                 self.pending
                     .push_back(json!({"index":event.index,"event":event.value}));
@@ -574,13 +830,17 @@ async fn stream(
 ) -> HttpResult<Response> {
     let channel = service.channel(&headers, &run)?;
     page.validate()?;
-    service.load(&channel).await?;
+    let session = service.load(&channel).await?;
+    if !page.matches(&session) {
+        return Err(CONFLICT);
+    }
     let permit = service.host.reader().map_err(|_| UNAVAILABLE)?;
     let reader = Reader {
         service,
         channel,
         after: page.after,
         limit: page.limit,
+        input_generation: page.input_generation,
         pending: VecDeque::new(),
         done: false,
         _permit: permit,

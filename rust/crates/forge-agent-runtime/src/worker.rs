@@ -120,6 +120,7 @@ impl Worker {
         }
         if session.continued_by.is_some()
             || session.delivery_only
+            || session.managed && !session.current_delivery
             || receipt.is_some_and(|receipt| {
                 !receipt.current_delivery
                     || receipt.generation != session.input_generation

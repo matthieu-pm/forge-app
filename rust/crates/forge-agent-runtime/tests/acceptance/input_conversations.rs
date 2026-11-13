@@ -47,7 +47,7 @@ impl Capabilities for NoEffects {
         )
     }
 }
-fn engine(content: Vec<Value>) -> Engine {
+pub(super) fn engine(content: Vec<Value>) -> Engine {
     Engine::new(
         Arc::new(ModelStep(content)),
         Arc::new(Executor {

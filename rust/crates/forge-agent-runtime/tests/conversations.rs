@@ -15,6 +15,8 @@ use std::time::Duration;
 use uuid::Uuid;
 #[path = "acceptance/input_conversations.rs"]
 mod input_conversations;
+#[path = "acceptance/queued_conversations.rs"]
+mod queued_conversations;
 #[path = "acceptance/required_conversations.rs"]
 mod required_conversations;
 const SECRET: &str = "public-conversation-fixture-signing-secret";

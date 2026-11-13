@@ -3,6 +3,7 @@ pub mod approval;
 pub mod capabilities;
 pub mod context;
 pub mod contracts;
+pub mod delivery;
 pub mod diagnostics;
 pub mod eve;
 pub mod files;

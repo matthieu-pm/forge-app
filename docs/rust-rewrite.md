@@ -110,7 +110,7 @@ gate pass.
 | 3b12g | Renewal mutations, signed webhook recovery, replacement proofs and authenticated billing summary | Passed |
 | 3b13a1 | Ordinary question batches, typed answers and durable composer continuation | Passed |
 | 3b13a2 | Mixed required-input deferral and original approval ownership across continuation | Passed |
-| 3b13a3a | Private queued-input journal, handoff protocol and managed native adapter | Pending |
+| 3b13a3a | Private queued-input journal, handoff protocol and managed native adapter | In progress |
 | 3b13a3b | App delivery ledger, background draining and authenticated recovery | Pending |
 | 3b13a3 | Active delivery queue, authority handoff and recovery | Pending |
 | 3b13b | Native child-agent execution, shared sandbox, usage and recovery | Pending |
@@ -3129,3 +3129,49 @@ Implement this in two substantial checkpoints, each followed by the full gate:
 The retained React client's recovery logic also needs its planned 4a adaptation:
 an older waiting/completion event must not mark a later delivery on the same run
 as settled. The existing UI code and design remain the frontend implementation.
+
+### Milestone 3b13a3a implementation
+
+The private protocol separates accepting an immutable input intent, acknowledging
+an exact drained delivery, preparing a frozen FIFO prefix, and activating that
+prefix with freshly authenticated execution authority. Delivery identity and
+execution ownership are recorded separately, including when a composer delivery
+finishes while an older run still owns pending questions. None of the first three
+operations starts a worker or changes the current execution's credentials.
+
+Managed delivery starts on a fresh native conversation. An existing unmanaged
+conversation keeps its existing protocol; changing its mode is rejected without
+mutation because old snapshots do not prove the original model selection needed
+for queued authority handoff. The 3b13a3b app integration must select protocol per
+thread instead of treating the adapter's queue capability as migration authority.
+
+The managed adapter emits public events followed by a certified `Parked` frame.
+Its caller must commit the final cursor and app state before acknowledging that
+boundary. A raw completion or cancellation event alone does not certify drainage.
+Exact activation retries retain their delivery receipt; later activations on the
+same run receive distinct terminal event identities.
+
+Acceptance scenarios cover queued replies during a successor's model call,
+immutable prepared prefixes, exact retries, provider/authority handoff, and
+cancellation before the successor's model result is committed. Cancellation
+retains committed results and usage while closing unfinished cancelled tools;
+an ambiguous in-flight effect cannot be replayed by a later approval. This is an
+explicit adaptation to the native engine's earlier persistence boundary.
+
+This checkpoint remains in progress until its full gate passes. It does not yet
+wire the app delivery ledger or background drainer; that remains 3b13a3b.
+
+Paused at the user's request on 2026-11-13. The first full gate was interrupted
+during Rust documentation checks after 790 Rust tests passed and three test
+expectations failed. Source comparisons, formatting and Clippy passed; JavaScript
+tests and typechecks had not run in this gate. All 2,936 source files were unchanged
+during verification. The current implementation remains uncommitted.
+
+On resume, correct the two expired-token fixtures in runtime `tests/http.rs`
+(the token helper clamps the requested lifetime to 30 seconds, so use issuance
+60 seconds ago with a 30-second lifetime). In `managed_native_runtime.rs`, restore
+the partial-delivery assertions to `terminal_id`: an unresolved canonical batch
+completes its delivery while retaining pending input. Keep the exact replay and
+distinct-generation assertions. Then rerun the complete gate from the beginning
+before starting 3b13a3b. Detailed integration audits and source references are in
+the local `.forge/rust-rewrite/loops-next-notes.md` continuation notes.

@@ -6,7 +6,11 @@ use base64::{Engine, engine::general_purpose::URL_SAFE_NO_PAD};
 use forge_core::{
     agents::{
         eve,
-        runtime::{Context, Continuation, Error, Events, Runtime},
+        runtime::{
+            Context, Continuation, ConversationFence, DeliveryFrame, DeliveryPhase,
+            DeliveryReceipt, DrainBoundary, Error, Events, HandoffPlan, IntentReceipt,
+            ManagedSession, OpenDelivery, Preparation, QueuedInput, Runtime,
+        },
     },
     canonical::javascript_stringify,
 };
@@ -21,6 +25,69 @@ use tokio::time::{sleep, timeout};
 use uuid::Uuid;
 const LINE_LIMIT: usize = 8 * 1024 * 1024 + 1024;
 const FAILED: Error = Error("The native agent runtime could not complete this request.");
+const SAFE_INTEGER: u64 = 9_007_199_254_740_991;
+
+fn fence_valid(fence: &ConversationFence) -> bool {
+    fence.generation <= SAFE_INTEGER
+}
+fn boundary_valid(boundary: &DrainBoundary) -> bool {
+    fence_valid(&boundary.conversation)
+        && [&boundary.delivery, &boundary.execution]
+            .iter()
+            .all(|snapshot| {
+                snapshot.input_generation <= SAFE_INTEGER
+                    && snapshot.state_revision <= SAFE_INTEGER
+                    && snapshot.next_index <= SAFE_INTEGER
+                    && (!snapshot.delivery_only || snapshot.phase == DeliveryPhase::Complete)
+            })
+        && !boundary.execution.delivery_only
+}
+fn plan_valid(plan: &HandoffPlan) -> bool {
+    fence_valid(&plan.conversation)
+        && plan.conversation == plan.boundary.conversation
+        && boundary_valid(&plan.boundary)
+        && (1..=128).contains(&plan.intent_ids.len())
+        && plan.intent_ids.first() == Some(&plan.anchor_intent_id)
+        && plan
+            .intent_ids
+            .iter()
+            .collect::<std::collections::HashSet<_>>()
+            .len()
+            == plan.intent_ids.len()
+        && plan.prefix_end_sequence <= SAFE_INTEGER
+        && !plan.authority.provider.is_empty()
+        && !plan.authority.model_id.is_empty()
+        && !plan.authority.reasoning_effort.is_empty()
+}
+fn status_boundary(
+    status: &Value,
+    cursor: &Cursor,
+    generation: u64,
+) -> Result<DrainBoundary, Error> {
+    let boundary: DrainBoundary =
+        serde_json::from_value(status["boundary"].clone()).map_err(|_| FAILED)?;
+    let proof = cursor.conversation.as_ref().ok_or(FAILED)?;
+    let phase: DeliveryPhase =
+        serde_json::from_value(status["phase"].clone()).map_err(|_| FAILED)?;
+    if !boundary_valid(&boundary)
+        || boundary.conversation.conversation_id != cursor.conversation_id
+        || boundary.conversation.head_run_id != proof.head_run_id
+        || boundary.conversation.generation != proof.generation
+        || boundary.delivery.run_id != cursor.run_id
+        || boundary.delivery.input_generation != generation
+        || boundary.delivery.next_index != status["nextIndex"].as_u64().ok_or(FAILED)?
+        || boundary.delivery.phase != phase
+        || Some(boundary.delivery.cancelled || phase == DeliveryPhase::Cancelled)
+            != status["cancelled"].as_bool()
+        || boundary.execution.run_id != proof.owner_run_id
+        || boundary.execution.next_index != proof.owner_next_index
+        || (boundary.delivery.run_id == boundary.execution.run_id
+            && boundary.delivery != boundary.execution)
+    {
+        return Err(FAILED);
+    }
+    Ok(boundary)
+}
 enum PostFailure {
     Rejected(reqwest::StatusCode),
     Unknown,
@@ -131,8 +198,8 @@ impl NativeRuntime {
             active: Mutex::new(HashMap::new()),
         })))
     }
-    fn stream(&self, context: Context, mode: Mode) -> Events {
-        let state = Stream {
+    fn state(&self, context: Context, mode: Mode, managed: bool) -> Stream {
+        Stream {
             runtime: self.clone(),
             context,
             mode: Some(mode),
@@ -146,7 +213,13 @@ impl NativeRuntime {
             done: false,
             terminal_seen: false,
             waiting_seen: false,
-        };
+            managed,
+            admission: None,
+            parked: None,
+        }
+    }
+    fn stream(&self, context: Context, mode: Mode) -> Events {
+        let state = self.state(context, mode, false);
         Box::pin(futures_util::stream::try_unfold(
             state,
             |mut state| async move {
@@ -235,10 +308,12 @@ impl NativeRuntime {
         serde_json::from_value(value["conversation"].clone()).map_err(|_| FAILED)
     }
 }
+#[allow(clippy::large_enum_variant)]
 enum Mode {
     Start(String, Vec<Value>),
     Resume(Vec<Value>),
     Reconnect,
+    Managed(OpenDelivery),
 }
 struct Stream {
     runtime: NativeRuntime,
@@ -254,6 +329,9 @@ struct Stream {
     done: bool,
     terminal_seen: bool,
     waiting_seen: bool,
+    managed: bool,
+    admission: Option<DeliveryReceipt>,
+    parked: Option<DeliveryFrame>,
 }
 impl Stream {
     fn claim(&self) -> Result<(), Error> {
@@ -282,6 +360,12 @@ impl Stream {
         }
     }
     async fn initialize(&mut self, mode: Mode) -> Result<(), Error> {
+        match mode {
+            Mode::Managed(delivery) => self.initialize_managed(delivery).await,
+            legacy => self.initialize_legacy(legacy).await,
+        }
+    }
+    async fn initialize_legacy(&mut self, mode: Mode) -> Result<(), Error> {
         let prior_checkpoint = self.context.runtime_session_id.clone();
         let admitting = matches!(&mode, Mode::Start(_, _));
         let run: Uuid = self.context.run_id.parse().map_err(|_| FAILED)?;
@@ -380,6 +464,7 @@ impl Stream {
                 )
             }
             Mode::Reconnect => (format!("{base}/recover"), json!({})),
+            Mode::Managed(_) => return Err(FAILED),
         };
         if resuming && cursor.conversation.is_none() {
             // The a1 cursor predates conversation ownership metadata. Migrated
@@ -519,12 +604,230 @@ impl Stream {
         self.response = Some(response);
         Ok(())
     }
+    async fn initialize_managed(&mut self, delivery: OpenDelivery) -> Result<(), Error> {
+        let run: Uuid = self.context.run_id.parse().map_err(|_| FAILED)?;
+        let conversation: Uuid = self.context.thread_id.parse().map_err(|_| FAILED)?;
+        let prior_checkpoint = self.context.runtime_session_id.clone();
+        let previous = prior_checkpoint
+            .as_deref()
+            .map(|value| Cursor::decode(value).ok_or(FAILED))
+            .transpose()?;
+        if previous
+            .as_ref()
+            .is_some_and(|cursor| cursor.conversation_id != conversation)
+        {
+            return Err(FAILED);
+        }
+        let starting = matches!(&delivery, OpenDelivery::Start { .. });
+        let recovering = matches!(&delivery, OpenDelivery::Recover { .. });
+        let base = format!("/native/v1/runs/{run}");
+        let mut cursor = if starting {
+            previous
+                .as_ref()
+                .filter(|cursor| cursor.run_id == run)
+                .cloned()
+                .unwrap_or_else(|| Cursor {
+                    conversation_id: conversation,
+                    run_id: run,
+                    previous_run_id: previous.as_ref().map(|cursor| {
+                        cursor
+                            .conversation
+                            .as_ref()
+                            .map_or(cursor.run_id, |proof| proof.head_run_id)
+                    }),
+                    stream_index: 0,
+                    deadline_ms: self.context.deadline_ms,
+                    admitted: false,
+                    settled: None,
+                    conversation: previous
+                        .as_ref()
+                        .and_then(|cursor| cursor.conversation.clone()),
+                    pending_inputs: false,
+                    delivery_complete: false,
+                })
+        } else {
+            let mut cursor = previous.ok_or(Error(
+                "Native runtime recovery requires this run's saved cursor.",
+            ))?;
+            if recovering && cursor.run_id != run {
+                return Err(FAILED);
+            }
+            if !recovering {
+                cursor.run_id = run;
+                cursor.previous_run_id = None;
+                cursor.deadline_ms = self.context.deadline_ms;
+            }
+            cursor
+        };
+        let (path, body, generation, handoff) = match delivery {
+            OpenDelivery::Start {
+                message,
+                attachments,
+            } => {
+                let attachments = attachments
+                    .into_iter()
+                    .map(|attachment| {
+                        if ["name", "contentType", "contentBase64"]
+                            .iter()
+                            .any(|key| !attachment[*key].is_string())
+                        {
+                            return Err(FAILED);
+                        }
+                        Ok(json!({"name":attachment["name"],"contentType":attachment["contentType"],"contentBase64":attachment["contentBase64"]}))
+                    })
+                    .collect::<Result<Vec<_>, Error>>()?;
+                let mut body = json!({"managed":true,"conversationId":conversation,"previousRunId":cursor.previous_run_id,"message":message,"attachments":attachments,"deadline":cursor.deadline_ms});
+                if let Some(proof) = &cursor.conversation {
+                    body["expectedGeneration"] = json!(proof.generation);
+                }
+                (base.clone(), body, 0, None)
+            }
+            OpenDelivery::Recover { input_generation } => {
+                if input_generation > SAFE_INTEGER {
+                    return Err(FAILED);
+                }
+                (
+                    format!("{base}/recover"),
+                    json!({"managed":true,"inputGeneration":input_generation}),
+                    input_generation,
+                    None,
+                )
+            }
+            OpenDelivery::Activate { plan } => {
+                if !plan_valid(&plan)
+                    || plan.activation_run_id != run
+                    || plan.conversation.conversation_id != conversation
+                    || self.context.model["provider"] != plan.authority.provider
+                    || self.context.model["modelId"] != plan.authority.model_id
+                    || self.context.reasoning_effort != plan.authority.reasoning_effort
+                {
+                    return Err(FAILED);
+                }
+                (
+                    format!("{base}/handoffs/{}/activate", plan.id),
+                    json!({"boundary":plan.boundary}),
+                    plan.conversation
+                        .generation
+                        .checked_add(1)
+                        .filter(|generation| *generation <= SAFE_INTEGER)
+                        .ok_or(FAILED)?,
+                    Some(plan.id),
+                )
+            }
+        };
+        self.token = self.runtime.0.transport.channel(&self.context, false)?;
+        // A lost first admission keeps enough cursor context to retry the exact
+        // start. No managed request owns the live feed before its receipt and
+        // application checkpoint have both been accepted.
+        if starting {
+            self.context.checkpoint.save(cursor.encode()).await?;
+        }
+        let acknowledged = match self
+            .runtime
+            .post(
+                &path,
+                &self.token,
+                body,
+                self.context.correlation_id.as_deref(),
+                &self.context.run_id,
+            )
+            .await
+        {
+            Ok(value) => value,
+            Err(failure) => {
+                if starting && matches!(failure, PostFailure::Rejected(_)) {
+                    self.restore_checkpoint(prior_checkpoint.as_deref()).await?;
+                }
+                return Err(FAILED);
+            }
+        };
+        let receipt: DeliveryReceipt =
+            serde_json::from_value(acknowledged["delivery"].clone()).map_err(|_| FAILED)?;
+        if receipt.run_id != run
+            || receipt.input_generation != generation
+            || receipt.stream_start_index > SAFE_INTEGER
+            || (!recovering && receipt.handoff_id != handoff)
+        {
+            return Err(FAILED);
+        }
+        if !receipt.current_delivery {
+            if starting {
+                self.restore_checkpoint(prior_checkpoint.as_deref()).await?;
+            }
+            self.admission = Some(receipt);
+            self.done = true;
+            return Ok(());
+        }
+        let status = acknowledged.get("status").ok_or(FAILED)?;
+        cursor.accept_conversation(status)?;
+        let boundary = status_boundary(status, &cursor, generation)?;
+        cursor.stream_index = if recovering || starting {
+            cursor.stream_index.max(receipt.stream_start_index)
+        } else {
+            receipt.stream_start_index
+        };
+        if cursor.stream_index > boundary.delivery.next_index {
+            return Err(FAILED);
+        }
+        cursor.admitted = true;
+        cursor.settled = None;
+        cursor.pending_inputs = false;
+        cursor.delivery_complete = false;
+        self.context.checkpoint.save(cursor.encode()).await?;
+        self.claim()?;
+        self.owned()?;
+        let response = timeout(
+            Duration::from_secs(30),
+            self.runtime.0.transport.request(
+                &format!(
+                    "{base}/stream?after={}&inputGeneration={generation}",
+                    cursor.stream_index
+                ),
+                reqwest::Method::GET,
+                &self.token,
+                None,
+                None,
+                Some(Duration::from_secs(900)),
+            ),
+        )
+        .await
+        .map_err(|_| FAILED)??;
+        if !response.status().is_success()
+            || !response
+                .headers()
+                .get(reqwest::header::CONTENT_TYPE)
+                .and_then(|value| value.to_str().ok())
+                .is_some_and(|value| {
+                    value.split(';').next().is_some_and(|media_type| {
+                        media_type
+                            .trim()
+                            .eq_ignore_ascii_case("application/x-ndjson")
+                    })
+                })
+        {
+            return Err(FAILED);
+        }
+        self.admission = Some(receipt);
+        self.cursor = Some(cursor);
+        self.response = Some(response);
+        Ok(())
+    }
+    async fn restore_checkpoint(&self, previous: Option<&str>) -> Result<(), Error> {
+        if let Some(previous) = previous {
+            self.context.checkpoint.save(previous.to_owned()).await
+        } else {
+            self.context.checkpoint.clear().await
+        }
+    }
     async fn next(&mut self) -> Result<Option<Value>, Error> {
         if let Some(mode) = self.mode.take() {
             self.initialize(mode).await?;
             if self.done {
                 return Ok(None);
             }
+        }
+        if self.done && self.queue.is_empty() && !self.pending_checkpoint {
+            return Ok(None);
         }
         loop {
             self.owned()?;
@@ -564,11 +867,21 @@ impl Stream {
                             status["phase"].as_str(),
                             Some("waiting" | "complete" | "failed")
                         ) && status["cancelled"] != true
+                            && !(self.managed && status["phase"] == "cancelled")
                         || status["nextIndex"].as_u64() != Some(cursor.stream_index)
                     {
                         return Err(FAILED);
                     }
                     cursor.accept_conversation(status)?;
+                    let boundary = if self.managed {
+                        Some(status_boundary(
+                            status,
+                            cursor,
+                            self.admission.as_ref().ok_or(FAILED)?.input_generation,
+                        )?)
+                    } else {
+                        None
+                    };
                     let pending = status.get("pendingRequests").and_then(Value::as_array);
                     let requests = pending.filter(|requests| !requests.is_empty());
                     let questions = requests.is_some_and(|requests| {
@@ -576,7 +889,11 @@ impl Stream {
                     });
                     let mut question_events = vec![];
                     if let Some(requests) = requests {
-                        if status["cancelled"] == true
+                        if (status["cancelled"] == true
+                            && boundary.as_ref().is_none_or(|boundary| {
+                                boundary.execution.run_id == boundary.delivery.run_id
+                                    || boundary.execution.cancelled
+                            }))
                             || requests
                                 .iter()
                                 .any(|request| match request["kind"].as_str() {
@@ -629,11 +946,20 @@ impl Stream {
                     } else {
                         None
                     };
-                    // All earlier normalized batch entries were persisted before
-                    // this terminal status was read. Only now certify the head;
-                    // the first question alone must never authorize continuation.
-                    self.context.checkpoint.save(cursor.encode()).await?;
-                    let kind = if status["cancelled"] == true {
+                    // A managed consumer commits the final cursor together with
+                    // its terminal/pending application state. The adapter must
+                    // never certify a drain ahead of that atomic app commit.
+                    if let Some(boundary) = boundary {
+                        self.parked = Some(DeliveryFrame::Parked {
+                            boundary,
+                            final_cursor: cursor.encode(),
+                        });
+                    } else {
+                        self.context.checkpoint.save(cursor.encode()).await?;
+                    }
+                    let kind = if status["cancelled"] == true
+                        || (self.managed && status["phase"] == "cancelled")
+                    {
                         Some("run.cancelled")
                     } else if status["phase"] == "failed" {
                         Some("run.failed")
@@ -646,21 +972,36 @@ impl Stream {
                             _ => None,
                         }
                     };
+                    let delivery_key = if self.managed {
+                        format!(
+                            "delivery:{}",
+                            self.admission.as_ref().ok_or(FAILED)?.input_generation
+                        )
+                    } else {
+                        self.owner.to_string()
+                    };
                     if let Some(kind) = kind {
-                        if !self.terminal_seen {
-                            self.queue.push_back(json!({"sourceEventId":format!("native:{}:status:{kind}",cursor.run_id),"source":"eve","type":kind,"payload":if kind=="run.failed"{json!({"code":"RUNTIME_EXECUTION_FAILED","message":"The native runtime run failed."})}else{json!({})}}));
+                        if self.managed || !self.terminal_seen {
+                            let source = if self.managed {
+                                format!("native:{}:{delivery_key}:status:{kind}", cursor.run_id)
+                            } else {
+                                format!("native:{}:status:{kind}", cursor.run_id)
+                            };
+                            self.queue.push_back(json!({"sourceEventId":source,"source":"eve","type":kind,"payload":if kind=="run.failed"{json!({"code":"RUNTIME_EXECUTION_FAILED","message":"The native runtime run failed."})}else{json!({})}}));
                         }
-                    } else if !self.waiting_seen {
-                        if !question_events.is_empty() {
+                    } else if self.managed || !self.waiting_seen {
+                        if !self.waiting_seen && !question_events.is_empty() {
                             for (index, event) in question_events.iter_mut().enumerate() {
                                 event["sourceEventId"] = json!(format!(
                                     "native:{}:waiting:{}:{index}",
-                                    cursor.run_id, self.owner
+                                    cursor.run_id, delivery_key
                                 ));
                             }
                             self.queue.extend(question_events);
-                            self.done = true;
-                            continue;
+                            if !self.managed {
+                                self.done = true;
+                                continue;
+                            }
                         }
                         let request = requests
                             .and_then(|requests| {
@@ -672,13 +1013,18 @@ impl Stream {
                                 })
                             })
                             .and_then(|request| request["requestId"].as_str())
+                            .or_else(|| {
+                                self.managed
+                                    .then(|| requests?.first()?["requestId"].as_str())
+                                    .flatten()
+                            })
                             .or_else(|| status["pendingRequestId"].as_str())
                             .filter(|v| Uuid::parse_str(v).is_ok())
                             .ok_or(FAILED)?;
                         // A fresh stream may start after the approval event's
                         // offset. Reassert waiting for the coordinator's current
                         // recovery epoch without requesting another approval.
-                        self.queue.push_back(json!({"sourceEventId":format!("native:{}:waiting:{}",cursor.run_id,self.owner),"source":"eve","type":"run.waiting","payload":{"reason":"input-required","requestId":request}}));
+                        self.queue.push_back(json!({"sourceEventId":format!("native:{}:waiting:{}",cursor.run_id,delivery_key),"source":"eve","type":"run.waiting","payload":{"reason":"input-required","requestId":request}}));
                     }
                     self.done = true;
                     continue;
@@ -766,6 +1112,131 @@ impl Drop for Stream {
 impl Runtime for NativeRuntime {
     fn kind(&self) -> &'static str {
         "eve"
+    }
+    fn supports_delivery_queue(&self) -> bool {
+        true
+    }
+    async fn enqueue_input(
+        &self,
+        context: &Context,
+        input: &QueuedInput,
+    ) -> Result<IntentReceipt, Error> {
+        let run: Uuid = context.run_id.parse().map_err(|_| FAILED)?;
+        if context.thread_id.parse::<Uuid>().map_err(|_| FAILED)? != input.conversation_id {
+            return Err(FAILED);
+        }
+        let token = self.0.transport.channel(context, false)?;
+        let response = self
+            .post(
+                &format!("/native/v1/runs/{run}/inputs"),
+                &token,
+                json!(input),
+                context.correlation_id.as_deref(),
+                &context.run_id,
+            )
+            .await
+            .map_err(|_| FAILED)?;
+        let receipt: IntentReceipt =
+            serde_json::from_value(response["intent"].clone()).map_err(|_| FAILED)?;
+        if receipt.intent_id != input.intent_id
+            || receipt.original_run_id != run
+            || receipt.request_id != input.request_id
+            || receipt.approved != input.approved
+            || receipt.conversation.conversation_id != input.conversation_id
+            || !fence_valid(&receipt.conversation)
+            || receipt.sequence > SAFE_INTEGER
+            || receipt
+                .stream_start_index
+                .is_some_and(|index| index > SAFE_INTEGER)
+        {
+            return Err(FAILED);
+        }
+        Ok(receipt)
+    }
+    async fn acknowledge_drained(
+        &self,
+        context: &Context,
+        boundary: &DrainBoundary,
+    ) -> Result<(), Error> {
+        if !boundary_valid(boundary)
+            || context.thread_id.parse::<Uuid>().map_err(|_| FAILED)?
+                != boundary.conversation.conversation_id
+            || context.run_id.parse::<Uuid>().map_err(|_| FAILED)? != boundary.delivery.run_id
+        {
+            return Err(FAILED);
+        }
+        let token = self.0.transport.channel(context, false)?;
+        self.post(
+            &format!(
+                "/native/v1/conversations/{}/drained",
+                boundary.conversation.conversation_id
+            ),
+            &token,
+            json!({"boundary":boundary}),
+            context.correlation_id.as_deref(),
+            &context.run_id,
+        )
+        .await
+        .map_err(|_| FAILED)?;
+        Ok(())
+    }
+    async fn prepare_handoff(
+        &self,
+        context: &Context,
+        fence: &ConversationFence,
+    ) -> Result<Preparation, Error> {
+        if !fence_valid(fence)
+            || context.thread_id.parse::<Uuid>().map_err(|_| FAILED)? != fence.conversation_id
+            || Uuid::parse_str(&context.run_id).is_err()
+        {
+            return Err(FAILED);
+        }
+        let token = self.0.transport.channel(context, false)?;
+        let response = self
+            .post(
+                &format!(
+                    "/native/v1/conversations/{}/handoffs/prepare",
+                    fence.conversation_id
+                ),
+                &token,
+                json!({"fence":fence}),
+                context.correlation_id.as_deref(),
+                &context.run_id,
+            )
+            .await
+            .map_err(|_| FAILED)?;
+        let preparation: Preparation =
+            serde_json::from_value(response["preparation"].clone()).map_err(|_| FAILED)?;
+        if let Preparation::Ready { plan } = &preparation
+            && (!plan_valid(plan) || &plan.conversation != fence)
+        {
+            return Err(FAILED);
+        }
+        Ok(preparation)
+    }
+    async fn open_delivery(
+        &self,
+        context: Context,
+        delivery: OpenDelivery,
+    ) -> Result<ManagedSession, Error> {
+        let mut state = self.state(context, Mode::Managed(delivery), true);
+        let mode = state.mode.take().ok_or(FAILED)?;
+        state.initialize(mode).await?;
+        let admission = state.admission.clone().ok_or(FAILED)?;
+        let frames = Box::pin(futures_util::stream::try_unfold(
+            state,
+            |mut state| async move {
+                if let Some(event) = state.next().await? {
+                    return Ok(Some((DeliveryFrame::Event(event), state)));
+                }
+                if let Some(parked) = state.parked.take() {
+                    state.owned()?;
+                    return Ok(Some((parked, state)));
+                }
+                Ok(None)
+            },
+        ));
+        Ok(ManagedSession { admission, frames })
     }
     fn cursor_run_id(&self, cursor: &str) -> Option<String> {
         Some(Cursor::decode(cursor)?.run_id.to_string())

@@ -297,6 +297,603 @@ async fn bytes(response: Response) -> String {
 async fn json_body(response: Response) -> Value {
     serde_json::from_str(&bytes(response).await).unwrap()
 }
+async fn managed_boundary(f: &Fixture, generation: u64) -> Value {
+    let response = f
+        .request(
+            "GET",
+            &format!("/stream?inputGeneration={generation}"),
+            None,
+        )
+        .await;
+    assert_eq!(response.status(), StatusCode::OK);
+    let frames = bytes(response)
+        .await
+        .lines()
+        .map(|line| serde_json::from_str::<Value>(line).unwrap())
+        .collect::<Vec<_>>();
+    assert!(
+        frames.iter().all(|frame| frame.get("error").is_none()),
+        "{frames:?}"
+    );
+    let boundary = frames.last().unwrap()["status"]["boundary"].clone();
+    assert!(boundary.is_object(), "{frames:?}");
+    assert_eq!(boundary["delivery"]["inputGeneration"], generation);
+    boundary
+}
+
+#[tokio::test]
+async fn managed_input_queue_retries_drain_and_restart_activate_exactly_once() {
+    let mut f = Fixture::new(Mode::Approval, 1, 2).await;
+    let conversation = Uuid::new_v4();
+    f.admission["managed"] = json!(true);
+    f.admission["conversationId"] = json!(conversation);
+    let admitted = json_body(f.request("POST", "", Some(f.admission.clone())).await).await;
+    assert_eq!(admitted["delivery"]["inputGeneration"], 0);
+    assert_eq!(admitted["delivery"]["replayed"], false);
+    f.phase(Phase::Waiting).await;
+    f.idle().await;
+    let replay = json_body(f.request("POST", "", Some(f.admission.clone())).await).await;
+    assert_eq!(replay["delivery"]["replayed"], true);
+    let before = f.store.load(&f.channel).await.unwrap();
+    let request_id = before.state.pending_request().unwrap().to_owned();
+    let input = json!({"intentId":Uuid::new_v4(),"conversationId":conversation,"requestId":request_id,"approved":true});
+    // Dropping the HTTP acknowledgement cannot lose or duplicate the intent.
+    let lost = f.request("POST", "/inputs", Some(input.clone())).await;
+    assert_eq!(lost.status(), StatusCode::ACCEPTED);
+    drop(lost);
+    let receipt = json_body(f.request("POST", "/inputs", Some(input.clone())).await).await;
+    assert_eq!(receipt["intent"]["replayed"], true);
+    assert_eq!(receipt["intent"]["state"], "queued");
+    assert_eq!(receipt["intent"]["originalRunId"], json!(f.run));
+    let after = f.store.load(&f.channel).await.unwrap();
+    assert_eq!(after.state.snapshot(), before.state.snapshot());
+    assert_eq!(after.next_index, before.next_index);
+    assert_eq!(after.input_generation, before.input_generation);
+    assert!(!f.host.is_active(&f.run.to_string()));
+    assert_eq!(f.factory.effects.load(Ordering::SeqCst), 0);
+    let fence = receipt["intent"]["conversation"].clone();
+    let prepare_path = format!("/native/v1/conversations/{conversation}/handoffs/prepare");
+    let prepare = json_body(
+        request(
+            &f.app,
+            "POST",
+            &prepare_path,
+            Some(&f.token),
+            Some(json!({"fence":fence})),
+        )
+        .await,
+    )
+    .await;
+    assert_eq!(prepare["preparation"]["state"], "awaiting-drain");
+    let worker = forge_agent_runtime::worker::Worker::new(
+        f.store.clone(),
+        Arc::new(Adapter(f.factory.clone())),
+        Options::default(),
+    )
+    .unwrap();
+    assert!(
+        worker
+            .run(
+                &f.channel,
+                Some(forge_agent_runtime::worker::Response {
+                    request: request_id.clone(),
+                    decision: forge_agent_runtime::engine::Decision::Approved
+                }),
+                &Cancellation::default()
+            )
+            .await
+            .is_err()
+    );
+    assert_eq!(f.request("POST","/resume",Some(json!({"requestId":request_id,"approved":true,"conversationId":conversation,"expectedHeadRunId":f.run,"expectedGeneration":fence["generation"]}))).await.status(),StatusCode::CONFLICT);
+    assert_eq!(
+        f.request("POST", "/recover", None).await.status(),
+        StatusCode::CONFLICT
+    );
+    assert_eq!(
+        f.request("GET", "/stream", None).await.status(),
+        StatusCode::CONFLICT
+    );
+    assert_eq!(
+        f.request("GET", "/events?inputGeneration=1", None)
+            .await
+            .status(),
+        StatusCode::CONFLICT
+    );
+    let boundary = managed_boundary(&f, 0).await;
+    let drained_path = format!("/native/v1/conversations/{conversation}/drained");
+    let mut wrong = boundary.clone();
+    wrong["execution"]["nextIndex"] =
+        json!(boundary["execution"]["nextIndex"].as_u64().unwrap() + 1);
+    assert_eq!(
+        request(
+            &f.app,
+            "POST",
+            &drained_path,
+            Some(&f.token),
+            Some(json!({"boundary":wrong}))
+        )
+        .await
+        .status(),
+        StatusCode::CONFLICT
+    );
+    for _ in 0..2 {
+        assert_eq!(
+            request(
+                &f.app,
+                "POST",
+                &drained_path,
+                Some(&f.token),
+                Some(json!({"boundary":boundary}))
+            )
+            .await
+            .status(),
+            StatusCode::OK
+        );
+    }
+    let prepared = json_body(
+        request(
+            &f.app,
+            "POST",
+            &prepare_path,
+            Some(&f.token),
+            Some(json!({"fence":fence})),
+        )
+        .await,
+    )
+    .await;
+    let plan = prepared["preparation"]["plan"].clone();
+    assert_eq!(prepared["preparation"]["state"], "ready");
+    assert_eq!(plan["anchorIntentId"], input["intentId"]);
+    assert_eq!(plan["activationRunId"], json!(f.run));
+    assert_eq!(
+        json_body(
+            request(
+                &f.app,
+                "POST",
+                &prepare_path,
+                Some(&f.token),
+                Some(json!({"fence":fence}))
+            )
+            .await
+        )
+        .await,
+        prepared
+    );
+    let activate_path = format!(
+        "/native/v1/runs/{}/handoffs/{}/activate",
+        f.run,
+        plan["id"].as_str().unwrap()
+    );
+    let expired = token(
+        f.run,
+        "fixture-user",
+        "fixture-workspace",
+        Utc::now().timestamp() - 10,
+        1.,
+    );
+    assert_eq!(
+        request(
+            &f.app,
+            "POST",
+            &activate_path,
+            Some(&expired),
+            Some(json!({"boundary":boundary}))
+        )
+        .await
+        .status(),
+        StatusCode::UNAUTHORIZED
+    );
+    f.host.shutdown().await.unwrap();
+    // No-work operations remain available on a stopped host; activation commits
+    // before its failed wakeup, and must retry that exact persisted receipt.
+    assert_eq!(
+        f.request("POST", "/inputs", Some(input.clone()))
+            .await
+            .status(),
+        StatusCode::ACCEPTED
+    );
+    assert_eq!(
+        request(
+            &f.app,
+            "POST",
+            &drained_path,
+            Some(&f.token),
+            Some(json!({"boundary":boundary}))
+        )
+        .await
+        .status(),
+        StatusCode::OK
+    );
+    assert_eq!(
+        request(
+            &f.app,
+            "POST",
+            &prepare_path,
+            Some(&f.token),
+            Some(json!({"fence":fence}))
+        )
+        .await
+        .status(),
+        StatusCode::OK
+    );
+    assert_eq!(
+        request(
+            &f.app,
+            "POST",
+            &activate_path,
+            Some(&f.token),
+            Some(json!({"boundary":boundary}))
+        )
+        .await
+        .status(),
+        StatusCode::SERVICE_UNAVAILABLE
+    );
+    assert_eq!(f.factory.effects.load(Ordering::SeqCst), 0);
+    let stored = f.store.load(&f.channel).await.unwrap();
+    assert_eq!(stored.state.phase(), Phase::Tools);
+    assert!(stored.input_generation > 0);
+    let fresh = TestFactory::new(Mode::Approval);
+    let restarted = host(&f.store, &fresh, 1, 2);
+    let app = http::router(restarted.clone(), SECRET.into()).unwrap();
+    let activated = json_body(
+        request(
+            &app,
+            "POST",
+            &activate_path,
+            Some(&f.token),
+            Some(json!({"boundary":boundary})),
+        )
+        .await,
+    )
+    .await;
+    assert_eq!(activated["delivery"]["replayed"], true);
+    assert_eq!(activated["delivery"]["currentDelivery"], true);
+    let generation = activated["delivery"]["inputGeneration"].as_u64().unwrap();
+    let start = activated["delivery"]["streamStartIndex"].clone();
+    f.phase(Phase::Complete).await;
+    assert_eq!(fresh.effects.load(Ordering::SeqCst), 1);
+    let again = json_body(
+        request(
+            &app,
+            "POST",
+            &activate_path,
+            Some(&f.token),
+            Some(json!({"boundary":boundary})),
+        )
+        .await,
+    )
+    .await;
+    assert_eq!(again["delivery"]["streamStartIndex"], start);
+    assert_eq!(again["delivery"]["inputGeneration"], generation);
+    assert_eq!(fresh.effects.load(Ordering::SeqCst), 1);
+    let original = json_body(
+        request(
+            &app,
+            "POST",
+            &format!("/native/v1/runs/{}", f.run),
+            Some(&f.token),
+            Some(f.admission.clone()),
+        )
+        .await,
+    )
+    .await;
+    assert_eq!(original["delivery"]["currentDelivery"], false);
+    assert_eq!(
+        request(
+            &app,
+            "GET",
+            &format!("/native/v1/runs/{}/stream?inputGeneration=0", f.run),
+            Some(&f.token),
+            None
+        )
+        .await
+        .status(),
+        StatusCode::CONFLICT
+    );
+    let completed = json_body(
+        request(
+            &app,
+            "POST",
+            &format!("/native/v1/runs/{}/recover", f.run),
+            Some(&f.token),
+            Some(json!({"managed":true,"inputGeneration":generation})),
+        )
+        .await,
+    )
+    .await;
+    assert_eq!(completed["delivery"]["currentDelivery"], true);
+    restarted.shutdown().await.unwrap();
+}
+
+#[tokio::test]
+async fn managed_queue_scope_and_receipt_operations_do_not_need_worker_capacity() {
+    let mut f = Fixture::new(Mode::MixedInput, 1, 2).await;
+    let conversation = Uuid::new_v4();
+    f.admission["managed"] = json!(true);
+    f.admission["conversationId"] = json!(conversation);
+    f.begin().await;
+    f.phase(Phase::Waiting).await;
+    f.idle().await;
+    let state = f.store.load(&f.channel).await.unwrap();
+    let requests = state
+        .pending_requests
+        .iter()
+        .filter(|request| request["kind"] == "tool-approval")
+        .collect::<Vec<_>>();
+    let first = json!({"intentId":Uuid::new_v4(),"conversationId":conversation,"requestId":requests[0]["requestId"],"approved":false});
+    let second = json!({"intentId":Uuid::new_v4(),"conversationId":conversation,"requestId":requests[1]["requestId"],"approved":true});
+    let stalled = TestFactory::new(Mode::Stall);
+    let busy = host(&f.store, &stalled, 1, 2);
+    let app = http::router(busy.clone(), SECRET.into()).unwrap();
+    let blocker = Uuid::new_v4();
+    let bearer = token(
+        blocker,
+        "fixture-user",
+        "fixture-workspace",
+        Utc::now().timestamp(),
+        900.,
+    );
+    assert_eq!(
+        request(
+            &app,
+            "POST",
+            &format!("/native/v1/runs/{blocker}"),
+            Some(&bearer),
+            Some(json!({"message":"Occupy the worker","deadline":f.admission["deadline"]}))
+        )
+        .await
+        .status(),
+        StatusCode::ACCEPTED
+    );
+    timeout(Duration::from_secs(5), stalled.began.notified())
+        .await
+        .unwrap();
+    let inputs_path = format!("/native/v1/runs/{}/inputs", f.run);
+    for (user, workspace) in [
+        ("foreign", "fixture-workspace"),
+        ("fixture-user", "foreign"),
+    ] {
+        let foreign = token(f.run, user, workspace, Utc::now().timestamp(), 900.);
+        assert_eq!(
+            request(
+                &app,
+                "POST",
+                &inputs_path,
+                Some(&foreign),
+                Some(first.clone())
+            )
+            .await
+            .status(),
+            StatusCode::CONFLICT
+        );
+    }
+    let accepted = json_body(
+        request(
+            &app,
+            "POST",
+            &inputs_path,
+            Some(&f.token),
+            Some(first.clone()),
+        )
+        .await,
+    )
+    .await;
+    assert_eq!(accepted["intent"]["state"], "queued");
+    let mut changed = first.clone();
+    changed["approved"] = json!(true);
+    assert_eq!(
+        request(&app, "POST", &inputs_path, Some(&f.token), Some(changed))
+            .await
+            .status(),
+        StatusCode::CONFLICT
+    );
+    let expired = token(
+        f.run,
+        "fixture-user",
+        "fixture-workspace",
+        Utc::now().timestamp() - 10,
+        1.,
+    );
+    assert_eq!(
+        request(
+            &app,
+            "POST",
+            &inputs_path,
+            Some(&expired),
+            Some(second.clone())
+        )
+        .await
+        .status(),
+        StatusCode::UNAUTHORIZED
+    );
+    let next = json_body(
+        request(
+            &app,
+            "POST",
+            &inputs_path,
+            Some(&f.token),
+            Some(second.clone()),
+        )
+        .await,
+    )
+    .await;
+    assert_eq!(
+        next["intent"]["sequence"].as_u64().unwrap(),
+        accepted["intent"]["sequence"].as_u64().unwrap() + 1
+    );
+    assert_eq!(
+        f.store.load(&f.channel).await.unwrap().state.snapshot(),
+        state.state.snapshot()
+    );
+    let boundary = managed_boundary(&f, 0).await;
+    let drain = format!("/native/v1/conversations/{conversation}/drained");
+    assert_eq!(
+        request(
+            &app,
+            "POST",
+            &drain,
+            Some(&f.token),
+            Some(json!({"boundary":boundary}))
+        )
+        .await
+        .status(),
+        StatusCode::OK
+    );
+    let prepared = json_body(
+        request(
+            &app,
+            "POST",
+            &format!("/native/v1/conversations/{conversation}/handoffs/prepare"),
+            Some(&f.token),
+            Some(json!({"fence":accepted["intent"]["conversation"]})),
+        )
+        .await,
+    )
+    .await;
+    assert_eq!(prepared["preparation"]["state"], "ready");
+    let plan = &prepared["preparation"]["plan"];
+    assert_eq!(
+        plan["intentIds"],
+        json!([first["intentId"], second["intentId"]])
+    );
+    let activation = format!(
+        "/native/v1/runs/{}/handoffs/{}/activate",
+        f.run,
+        plan["id"].as_str().unwrap()
+    );
+    assert_eq!(
+        request(
+            &app,
+            "POST",
+            &activation,
+            Some(&f.token),
+            Some(json!({"boundary":boundary}))
+        )
+        .await
+        .status(),
+        StatusCode::SERVICE_UNAVAILABLE
+    );
+    assert_eq!(stalled.models.load(Ordering::SeqCst), 1);
+    assert_eq!(stalled.effects.load(Ordering::SeqCst), 0);
+    assert_eq!(f.factory.effects.load(Ordering::SeqCst), 0);
+    busy.shutdown().await.unwrap();
+    f.host.shutdown().await.unwrap();
+}
+
+#[tokio::test]
+async fn queued_historical_approval_does_not_replace_an_active_successor_or_disappear_on_its_cancel()
+ {
+    let mut f = Fixture::new(Mode::Approval, 1, 2).await;
+    let conversation = Uuid::new_v4();
+    f.admission["managed"] = json!(true);
+    f.admission["conversationId"] = json!(conversation);
+    f.begin().await;
+    f.phase(Phase::Waiting).await;
+    f.idle().await;
+    let original = f.store.load(&f.channel).await.unwrap();
+    let request_id = original.state.pending_request().unwrap().to_owned();
+    let boundary = managed_boundary(&f, 0).await;
+    let drain_path = format!("/native/v1/conversations/{conversation}/drained");
+    assert_eq!(
+        request(
+            &f.app,
+            "POST",
+            &drain_path,
+            Some(&f.token),
+            Some(json!({"boundary":boundary}))
+        )
+        .await
+        .status(),
+        StatusCode::OK
+    );
+    f.host.shutdown().await.unwrap();
+    let stalled = TestFactory::new(Mode::Stall);
+    let running = host(&f.store, &stalled, 1, 2);
+    let app = http::router(running.clone(), SECRET.into()).unwrap();
+    let successor = Uuid::new_v4();
+    let bearer = token(
+        successor,
+        "fixture-user",
+        "fixture-workspace",
+        Utc::now().timestamp(),
+        900.,
+    );
+    let owner =
+        Channel::verify(SECRET, &format!("Bearer {bearer}"), Utc::now().timestamp()).unwrap();
+    let path = format!("/native/v1/runs/{successor}");
+    let admitted = request(&app,"POST",&path,Some(&bearer),Some(json!({"managed":true,"conversationId":conversation,"previousRunId":f.run,"expectedGeneration":boundary["conversation"]["generation"],"message":"deny","deadline":f.admission["deadline"]}))).await;
+    assert_eq!(admitted.status(), StatusCode::ACCEPTED);
+    timeout(Duration::from_secs(5), stalled.began.notified())
+        .await
+        .unwrap();
+    let before = f.store.load(&owner).await.unwrap();
+    assert_eq!(before.state.phase(), Phase::Generating);
+    let input = json!({"intentId":Uuid::new_v4(),"conversationId":conversation,"requestId":request_id,"approved":true});
+    let input_path = format!("/native/v1/runs/{}/inputs", f.run);
+    let receipt = json_body(
+        request(
+            &app,
+            "POST",
+            &input_path,
+            Some(&f.token),
+            Some(input.clone()),
+        )
+        .await,
+    )
+    .await;
+    assert_eq!(receipt["intent"]["state"], "queued");
+    assert!(running.is_active(&successor.to_string()));
+    assert!(!running.is_active(&f.run.to_string()));
+    let after = f.store.load(&owner).await.unwrap();
+    assert_eq!(after.state.snapshot(), before.state.snapshot());
+    assert_eq!(after.next_index, before.next_index);
+    assert_eq!(after.input_generation, before.input_generation);
+    let prepare = json_body(
+        request(
+            &app,
+            "POST",
+            &format!("/native/v1/conversations/{conversation}/handoffs/prepare"),
+            Some(&f.token),
+            Some(json!({"fence":receipt["intent"]["conversation"]})),
+        )
+        .await,
+    )
+    .await;
+    assert_eq!(prepare["preparation"]["state"], "awaiting-drain");
+    assert_eq!(
+        request(&app, "POST", &format!("{path}/cancel"), Some(&bearer), None)
+            .await
+            .status(),
+        StatusCode::OK
+    );
+    timeout(Duration::from_secs(5), async {
+        while running.is_active(&successor.to_string()) {
+            sleep(Duration::from_millis(10)).await;
+        }
+    })
+    .await
+    .unwrap();
+    let replayed =
+        json_body(request(&app, "POST", &input_path, Some(&f.token), Some(input)).await).await;
+    assert_eq!(replayed["intent"]["state"], "queued");
+    assert_eq!(replayed["intent"]["replayed"], true);
+    assert!(f.store.load(&owner).await.unwrap().cancelled);
+    assert_eq!(stalled.models.load(Ordering::SeqCst), 1);
+    assert_eq!(stalled.effects.load(Ordering::SeqCst), 0);
+    assert_eq!(
+        request(
+            &app,
+            "POST",
+            &format!("{path}/recover"),
+            Some(&bearer),
+            Some(json!({"managed":true,"inputGeneration":0}))
+        )
+        .await
+        .status(),
+        StatusCode::ACCEPTED
+    );
+    running.shutdown().await.unwrap();
+}
 #[tokio::test]
 async fn authentication_binding_and_closed_admission_reject_before_execution() {
     let f = Fixture::new(Mode::Finish, 2, 2).await;

@@ -17,6 +17,7 @@ use std::time::Duration;
 use uuid::Uuid;
 
 mod conversation;
+mod queue;
 mod response;
 pub use response::{InputReceipt, ResponseProof};
 const SCHEMAS: &[&str] = &[
@@ -26,6 +27,7 @@ const SCHEMAS: &[&str] = &[
     include_str!("../migrations/0004_session_budgets.sql"),
     include_str!("../migrations/0005_input_continuations.sql"),
     include_str!("../migrations/0006_input_delivery_owners.sql"),
+    include_str!("../migrations/0007_managed_input_queue.sql"),
 ];
 fn versions() -> Vec<(i32, String)> {
     SCHEMAS
@@ -66,6 +68,10 @@ pub struct Session {
     pub input_generation: u64,
     pub conversation: Option<ConversationProof>,
     pub pending_requests: Vec<Value>,
+    pub managed: bool,
+    pub current_delivery: bool,
+    pub boundary: Option<forge_core::agents::runtime::DrainBoundary>,
+    pub admission_replayed: bool,
 }
 #[derive(Clone, Debug, serde::Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -109,8 +115,9 @@ struct Row {
     delivery_only: bool,
     input_generation: i64,
     worker_active: bool,
+    authority: Option<String>,
 }
-const COLUMNS: &str = "run_id,workspace_id,user_id,conversation_id,parent_run_id,initial_hash,revision,engine_state::text AS snapshot,next_index,journal_bytes,epoch,lease_owner,lease_until,deadline,cancelled_at,continued_by_run_id,delivery_only,input_generation,COALESCE(lease_until > clock_timestamp() AND deadline > clock_timestamp() AND cancelled_at IS NULL AND continued_by_run_id IS NULL AND NOT delivery_only,false) AS worker_active";
+const COLUMNS: &str = "run_id,workspace_id,user_id,conversation_id,parent_run_id,initial_hash,revision,engine_state::text AS snapshot,next_index,journal_bytes,epoch,lease_owner,lease_until,deadline,cancelled_at,continued_by_run_id,delivery_only,input_generation,COALESCE(lease_until > clock_timestamp() AND deadline > clock_timestamp() AND cancelled_at IS NULL AND continued_by_run_id IS NULL AND NOT delivery_only,false) AS worker_active,authority::text AS authority";
 
 #[derive(sqlx::FromRow)]
 struct ContextRow {
@@ -123,6 +130,10 @@ struct ContextRow {
     owner_next_index: Option<i64>,
     owner_deadline: Option<DateTime<Utc>>,
     owner_cancelled: Option<bool>,
+    managed: Option<bool>,
+    current_delivery_run_id: Option<Uuid>,
+    delivery_snapshot: Option<String>,
+    execution_snapshot: Option<String>,
 }
 fn run(channel: &Channel) -> Result<Uuid> {
     channel.run_id().parse().map_err(|_| INVALID)
@@ -261,7 +272,7 @@ impl Store {
             Sha256::digest(javascript_stringify(&digest_input).as_bytes())
         );
         let mut tx = self.pool.begin().await.map_err(|_| FAILED)?;
-        sqlx::query("INSERT INTO forge_runtime.sessions(run_id,workspace_id,user_id,initial_hash,engine_state,deadline) VALUES($1,$2,$3,$4,$5::jsonb,$6) ON CONFLICT(run_id) DO NOTHING").bind(run(channel)?).bind(channel.workspace_id()).bind(channel.principal_id()).bind(&hash).bind(text).bind(deadline).execute(&mut *tx).await.map_err(|_|FAILED)?;
+        sqlx::query("INSERT INTO forge_runtime.sessions(run_id,workspace_id,user_id,initial_hash,engine_state,deadline,authority) VALUES($1,$2,$3,$4,$5::jsonb,$6,$7::jsonb) ON CONFLICT(run_id) DO NOTHING").bind(run(channel)?).bind(channel.workspace_id()).bind(channel.principal_id()).bind(&hash).bind(text).bind(deadline).bind(javascript_stringify(&json!(queue::authority(channel)))).execute(&mut *tx).await.map_err(|_|FAILED)?;
         let row = locked(&mut tx, channel).await?;
         if row.initial_hash != hash || row.deadline != deadline || row.conversation_id.is_some() {
             return Err(Error("The run already has a different runtime admission."));
@@ -274,14 +285,40 @@ impl Store {
         // Read delivery and current owner in one MVCC snapshot: separate reads
         // can combine an old delivery proof with a newly rebound owner's batch.
         let context = sqlx::query_as::<_, ContextRow>(&format!(
-            "SELECT requested.*,c.last_run_id AS head_run_id,c.execution_run_id,c.generation AS conversation_generation,owner.engine_state::text AS owner_snapshot,owner.next_index AS owner_next_index,owner.deadline AS owner_deadline,(owner.cancelled_at IS NOT NULL) AS owner_cancelled FROM (SELECT {COLUMNS} FROM forge_runtime.sessions WHERE run_id=$1) requested LEFT JOIN forge_runtime.conversations c ON c.id=requested.conversation_id LEFT JOIN forge_runtime.sessions owner ON owner.run_id=c.execution_run_id AND owner.conversation_id=c.id AND owner.workspace_id=requested.workspace_id AND owner.user_id=requested.user_id"
+            "SELECT requested.*,c.last_run_id AS head_run_id,c.execution_run_id,c.generation AS conversation_generation,owner.engine_state::text AS owner_snapshot,owner.next_index AS owner_next_index,owner.deadline AS owner_deadline,(owner.cancelled_at IS NOT NULL) AS owner_cancelled,c.managed,c.current_delivery_run_id,{delivery_snapshot} AS delivery_snapshot,{execution_snapshot} AS execution_snapshot FROM (SELECT {COLUMNS} FROM forge_runtime.sessions WHERE run_id=$1) requested LEFT JOIN forge_runtime.conversations c ON c.id=requested.conversation_id LEFT JOIN forge_runtime.sessions owner ON owner.run_id=c.execution_run_id AND owner.conversation_id=c.id AND owner.workspace_id=requested.workspace_id AND owner.user_id=requested.user_id LEFT JOIN forge_runtime.sessions delivery ON delivery.run_id=c.current_delivery_run_id AND delivery.conversation_id=c.id AND delivery.workspace_id=requested.workspace_id AND delivery.user_id=requested.user_id",
+            delivery_snapshot=queue::snapshot_sql("delivery"), execution_snapshot=queue::snapshot_sql("owner")
         ))
         .bind(run(channel)?)
         .fetch_optional(&self.pool)
         .await
         .map_err(|_| FAILED)?
         .ok_or(INVALID)?;
+        let managed = context.managed == Some(true);
+        let boundary = if managed {
+            Some(forge_core::agents::runtime::DrainBoundary {
+                conversation: forge_core::agents::runtime::ConversationFence {
+                    conversation_id: context.row.conversation_id.ok_or(INVALID)?,
+                    head_run_id: context.head_run_id.ok_or(INVALID)?,
+                    generation: context.conversation_generation.ok_or(INVALID)? as u64,
+                },
+                delivery: serde_json::from_str(
+                    context.delivery_snapshot.as_deref().ok_or(INVALID)?,
+                )
+                .map_err(|_| INVALID)?,
+                execution: serde_json::from_str(
+                    context.execution_snapshot.as_deref().ok_or(INVALID)?,
+                )
+                .map_err(|_| INVALID)?,
+            })
+        } else {
+            None
+        };
+        let current_delivery = context.row.conversation_id.is_none()
+            || context.current_delivery_run_id == Some(context.row.run_id);
         let row = context.row;
+        if managed {
+            queue::verify_authority(&row, channel)?;
+        }
         let state = restored(&row, channel)?;
         let (conversation, pending_requests) = if let Some(id) = row.conversation_id {
             let owner_id = context.execution_run_id.ok_or(INVALID)?;
@@ -328,6 +365,10 @@ impl Store {
             input_generation: row.input_generation as u64,
             conversation,
             pending_requests,
+            managed,
+            current_delivery,
+            boundary,
+            admission_replayed: false,
         })
     }
     /// Persist a resolved approval before acknowledging delivery. Only a parked
@@ -354,7 +395,20 @@ impl Store {
             .filter(|v| (1000..=60000).contains(v))
             .ok_or(INVALID)?;
         let mut tx = self.pool.begin().await.map_err(|_| FAILED)?;
+        let conversation_id: Option<Uuid> = sqlx::query_scalar("SELECT conversation_id FROM forge_runtime.sessions WHERE run_id=$1 AND workspace_id=$2 AND user_id=$3")
+            .bind(run(channel)?).bind(channel.workspace_id()).bind(channel.principal_id()).fetch_optional(&mut *tx).await.map_err(|_|FAILED)?.ok_or(INVALID)?;
+        let mut managed = false;
+        if let Some(id) = conversation_id {
+            let head = conversation::lock_conversation(&mut tx, id, channel).await?;
+            managed = head.managed;
+            if head.managed && head.current_delivery_run_id != Some(run(channel)?) {
+                return Err(LOST);
+            }
+        }
         let row = locked(&mut tx, channel).await?;
+        if managed {
+            queue::verify_authority(&row, channel)?;
+        }
         let now = now(&mut tx).await?;
         let state = restored(&row, channel)?;
         if row.cancelled_at.is_some()
